@@ -120,7 +120,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         correctCount.OnValueChanged += OnCorrectCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("RotatePillarQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("RotatePillarQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("RotatePillarQuest");
@@ -130,7 +130,18 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

@@ -111,7 +111,7 @@ public class FinalBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("FinalBossQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("FinalBossQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("FinalBossQuest");
@@ -122,7 +122,18 @@ public class FinalBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

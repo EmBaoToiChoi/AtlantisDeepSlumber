@@ -155,7 +155,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
         
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("StonePuzzleQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("StonePuzzleQuest"))
         {
             isQuestCompleted = true;
             SaveManager.MarkQuestCompleted("StonePuzzleQuest");
@@ -165,7 +165,18 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompleted = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

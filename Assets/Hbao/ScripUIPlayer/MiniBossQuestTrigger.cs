@@ -118,7 +118,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("MiniBossQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("MiniBossQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("MiniBossQuest");
@@ -129,7 +129,18 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

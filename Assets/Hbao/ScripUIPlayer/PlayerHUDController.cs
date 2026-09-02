@@ -374,6 +374,78 @@ public class PlayerHUDController : MonoBehaviour
             LocalPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled; // tránh duplicate
             LocalPlayerTarget.OnQSkillCancelled += HandleQSkillCancelled;
         }
+        StartCoroutine(DelayedRefreshActiveQuest());
+    }
+
+    public System.Collections.IEnumerator DelayedRefreshActiveQuest()
+    {
+        yield return new WaitForSeconds(0.4f);
+        RefreshCurrentActiveQuest();
+    }
+
+    public void RefreshCurrentActiveQuest()
+    {
+        InitializeUI();
+        var allMb = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        
+        // 1. Ưu tiên tìm quest đang thực sự Active
+        foreach (var mb in allMb)
+        {
+            if (mb is IQuestTrigger qt && qt.IsQuestActive && !qt.IsQuestCompleted)
+            {
+                TriggerQuestUIForObject(mb);
+                return;
+            }
+        }
+
+        // 2. Fallback: Nếu không có quest nào đánh dấu Active, tìm quest tiếp theo trong mạch truyện đã thỏa mãn tiền đề
+        if (BridgeCollapseTrigger.Instance != null && !BridgeCollapseTrigger.Instance.IsQuestCompleted && BridgeCollapseTrigger.Instance.IsPrerequisiteCompleted())
+        {
+            BridgeCollapseTrigger.Instance.ForceRefreshQuestUI();
+            return;
+        }
+
+        foreach (var mb in allMb)
+        {
+            if (mb is IQuestTrigger qt && !qt.IsQuestCompleted)
+            {
+                var method = mb.GetType().GetMethod("IsPrerequisiteCompleted");
+                if (method != null && method.ReturnType == typeof(bool))
+                {
+                    try
+                    {
+                        bool isPre = (bool)method.Invoke(mb, null);
+                        if (isPre)
+                        {
+                            TriggerQuestUIForObject(mb);
+                            return;
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
+    }
+
+    private void TriggerQuestUIForObject(MonoBehaviour mb)
+    {
+        if (mb is BridgeCollapseTrigger bridge)
+        {
+            bridge.ForceRefreshQuestUI();
+        }
+        else if (mb is ZombieQuestTargetManager zombie)
+        {
+            zombie.UpdateQuestUI();
+        }
+        else
+        {
+            var m = mb.GetType().GetMethod("UpdateQuestProgressUI", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (m != null)
+            {
+                m.Invoke(mb, null);
+            }
+        }
+        Debug.Log($"[PlayerHUDController] Refreshed active quest on HUD: {mb.GetType().Name}");
     }
 
     void OnDisable()

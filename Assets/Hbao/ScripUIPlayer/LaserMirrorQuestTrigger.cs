@@ -126,7 +126,7 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
         isFinalActivated.OnValueChanged += OnFinalActivatedChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("LaserMirrorQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("LaserMirrorQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("LaserMirrorQuest");
@@ -136,7 +136,18 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());
