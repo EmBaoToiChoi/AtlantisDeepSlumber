@@ -384,6 +384,36 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
         ApplyBridgeVisualState(hasCollapsed.Value, hasBeenRepaired.Value, logsSubmitted.Value);
         UpdateBridgeBlockerWall();
+
+        if (hasCollapsed.Value && !hasBeenRepaired.Value)
+        {
+            StartCoroutine(DelayedShowBridgeQuestUI());
+        }
+    }
+
+    private IEnumerator DelayedShowBridgeQuestUI()
+    {
+        yield return new WaitForSeconds(0.6f);
+        if (hasCollapsed.Value && !hasBeenRepaired.Value)
+        {
+            PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+            if (localHud != null)
+            {
+                localHud.ShowQuest(true, this);
+                if (isReadyToBuild.Value)
+                {
+                    localHud.UpdateQuestTitle(questBuildTitle, this);
+                    localHud.UpdateQuestDescription(questBuildDescription, this);
+                    localHud.UpdateQuestProgress((int)buildProgress.Value, 100);
+                }
+                else
+                {
+                    localHud.UpdateQuestTitle(questLogsTitle, this);
+                    localHud.UpdateQuestDescription(questLogsDescription, this);
+                    localHud.UpdateQuestProgress(logsSubmitted.Value, requiredLogsToRepair);
+                }
+            }
+        }
     }
 
     public override void OnNetworkDespawn()

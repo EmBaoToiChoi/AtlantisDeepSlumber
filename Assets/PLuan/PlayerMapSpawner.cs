@@ -126,6 +126,25 @@ public class PlayerMapSpawner : NetworkBehaviour
         }
     }
 
+    // Quản lý trạng thái Tiếp Tục của Phòng trên Server
+    private static Vector3 serverRoomContinuePos = Vector3.zero;
+    private static float serverRoomContinueRotY = 0f;
+    private static bool serverRoomHasContinuePos = false;
+    private static bool serverRoomIsContinueMode = false;
+    private static string serverRoomWorldSaveJson = "";
+
+    private Vector3 GetContinueSlotOffset(int slot)
+    {
+        switch (slot % 4)
+        {
+            case 0: return Vector3.zero;
+            case 1: return new Vector3(1.5f, 0, 0);
+            case 2: return new Vector3(-1.5f, 0, 0);
+            case 3: return new Vector3(0, 0, 1.5f);
+            default: return Vector3.zero;
+        }
+    }
+
     private IEnumerator ClientRequestSpawnCoroutine()
     {
         // Đợi 0.2s để scene load và NetworkObject đồng bộ hoàn toàn
@@ -137,8 +156,14 @@ public class PlayerMapSpawner : NetworkBehaviour
         float customRotY = SaveManager.PendingSpawnRotationY;
         bool hasCustomPos = SaveManager.HasPendingSpawnPosition && (customPos != Vector3.zero);
 
-        Debug.Log($"[PlayerMapSpawner] [CLIENT] Gửi ServerRpc yêu cầu sinh Player cho Client {NetworkManager.Singleton.LocalClientId} (Nhân vật ID: {selectedChar}, HasCustomPos: {hasCustomPos}, Pos: {customPos})");
-        RequestSpawnPlayerServerRpc(selectedChar, customPos, customRotY, hasCustomPos);
+        string worldSaveJson = "";
+        if (SaveManager.HasWorldSave())
+        {
+            worldSaveJson = JsonUtility.ToJson(SaveManager.LoadWorldSave());
+        }
+
+        Debug.Log($"[PlayerMapSpawner] [CLIENT] Gửi ServerRpc yêu cầu sinh Player cho Client {NetworkManager.Singleton.LocalClientId} (Nhân vật ID: {selectedChar}, HasCustomPos: {hasCustomPos}, Pos: {customPos}, ContinueMode: {SaveManager.IsContinueMode})");
+        RequestSpawnPlayerServerRpc(selectedChar, customPos, customRotY, hasCustomPos, worldSaveJson);
     }
 
     public override void OnNetworkDespawn()
@@ -196,14 +221,93 @@ public class PlayerMapSpawner : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestSpawnPlayerServerRpc(int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false, ServerRpcParams rpcParams = default)
+    private void RequestSpawnPlayerServerRpc(int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false, string worldSaveJson = "", ServerRpcParams rpcParams = default)
     {
         if (!IsServer) return;
 
         ulong clientId = rpcParams.Receive.SenderClientId;
         Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId} (HasCustomPos: {hasCustomPos}, Pos: {customPos})");
 
+        if (hasCustomPos && customPos != Vector3.zero && customPos.sqrMagnitude > 10f)
+        {
+            serverRoomContinuePos = customPos;
+            serverRoomContinueRotY = customRotY;
+            serverRoomHasContinuePos = true;
+            serverRoomIsContinueMode = true;
+            if (!string.IsNullOrEmpty(worldSaveJson))
+            {
+                serverRoomWorldSaveJson = worldSaveJson;
+            }
+
+            // Đồng bộ trạng thái Continue Mode & World Save xuống toàn bộ Client
+            SyncRoomContinueModeClientRpc(true, customPos, customRotY, serverRoomWorldSaveJson);
+        }
+        else if (serverRoomIsContinueMode)
+        {
+            // Gửi riêng cho Client vừa vào biết phòng đang ở chế độ Tiếp tục
+            SyncRoomContinueModeClientRpc(true, serverRoomContinuePos, serverRoomContinueRotY, serverRoomWorldSaveJson, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { clientId }
+                }
+            });
+        }
+
         SpawnPlayerForClient(clientId, characterId, customPos, customRotY, hasCustomPos);
+    }
+
+    [ClientRpc]
+    private void SyncRoomContinueModeClientRpc(bool isContinue, Vector3 continuePos, float continueRotY, string worldSaveJson, ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log($"[PlayerMapSpawner] [CLIENT] Đồng bộ chế độ phòng từ Server: Continue={isContinue}, Pos={continuePos}");
+        SaveManager.IsContinueMode = isContinue;
+        if (isContinue)
+        {
+            if (!string.IsNullOrEmpty(worldSaveJson))
+            {
+                SaveManager.ApplySyncedWorldSave(worldSaveJson);
+            }
+            SaveManager.HasPendingSpawnPosition = true;
+            SaveManager.PendingSpawnPosition = continuePos;
+            SaveManager.PendingSpawnRotationY = continueRotY;
+        }
+        else
+        {
+            SaveManager.ResetAllStatsForNewGame();
+        }
+
+        RefreshAllQuestsOnClient();
+    }
+
+    private void RefreshAllQuestsOnClient()
+    {
+        StartCoroutine(RefreshQuestsDelayed());
+    }
+
+    private IEnumerator RefreshQuestsDelayed()
+    {
+        yield return new WaitForSeconds(0.6f);
+
+        var allQuestTriggers = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        var hud = FindAnyObjectByType<PlayerHUDController>();
+        if (hud == null) yield break;
+
+        foreach (var mb in allQuestTriggers)
+        {
+            if (mb is IQuestTrigger qt)
+            {
+                if (qt.IsQuestActive && !qt.IsQuestCompleted)
+                {
+                    hud.ShowQuest(true, mb);
+                    hud.UpdateQuestTitle(qt.QuestTitle, mb);
+                    hud.UpdateQuestDescription(qt.QuestDescription, mb);
+                    hud.UpdateQuestProgress(qt.CurrentProgress, qt.TargetProgress);
+                    Debug.Log($"[PlayerMapSpawner] [CLIENT] Đã tự động hiển thị Quest đang active: {qt.QuestTitle}");
+                    break;
+                }
+            }
+        }
     }
 
     public void SpawnPlayerForClient(ulong clientId, int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false)
@@ -251,12 +355,19 @@ public class PlayerMapSpawner : NetworkBehaviour
         Quaternion spawnRot;
 
         bool isValidCustomPos = hasCustomPos && (customPos != Vector3.zero) && (customPos.sqrMagnitude > 10f);
+        bool useContinueSpawn = isValidCustomPos || serverRoomHasContinuePos;
 
-        if (isValidCustomPos)
+        if (useContinueSpawn)
         {
-            spawnPos = customPos + new Vector3(0, 0.5f, 0);
-            spawnRot = Quaternion.Euler(0, customRotY, 0);
-            Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} (Tiếp Tục) sử dụng vị trí lưu: {spawnPos}");
+            Vector3 basePos = isValidCustomPos ? customPos : serverRoomContinuePos;
+            float rotY = isValidCustomPos ? customRotY : serverRoomContinueRotY;
+
+            int slotIdx = GetSpawnIndexForClient(clientId);
+            Vector3 slotOffset = GetContinueSlotOffset(slotIdx);
+
+            spawnPos = basePos + slotOffset + new Vector3(0, 0.5f, 0);
+            spawnRot = Quaternion.Euler(0, rotY, 0);
+            Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} (Tiếp Tục - Slot {slotIdx}) sử dụng vị trí lưu: {spawnPos}");
         }
         else
         {

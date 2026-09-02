@@ -136,11 +136,17 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value && IsPrerequisiteCompleted())
+        else if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
-            UpdateQuestProgressUI();
+            StartCoroutine(DelayedShowQuestUI());
         }
+    }
+
+    private System.Collections.IEnumerator DelayedShowQuestUI()
+    {
+        yield return new WaitForSeconds(0.6f);
+        UpdateQuestProgressUI();
     }
 
     public override void OnNetworkDespawn()

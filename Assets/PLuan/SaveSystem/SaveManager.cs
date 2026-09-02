@@ -328,12 +328,26 @@ public class SaveManager : MonoBehaviour
         };
     }
 
+    private static string GetCharacterSaveKey(int classIndex)
+    {
+        string user = PlayerPrefs.GetString("AuthDisplayName", "");
+        if (!string.IsNullOrEmpty(user) && user != "Explorer")
+        {
+            return CHAR_SAVE_PREFIX + user + "_" + classIndex;
+        }
+        return CHAR_SAVE_PREFIX + classIndex;
+    }
+
     public static PlayerStateData LoadCharacterState(int classIndex)
     {
-        string key = CHAR_SAVE_PREFIX + classIndex;
-        if (PlayerPrefs.HasKey(key))
+        string userKey = GetCharacterSaveKey(classIndex);
+        string defaultKey = CHAR_SAVE_PREFIX + classIndex;
+
+        string targetKey = PlayerPrefs.HasKey(userKey) ? userKey : (PlayerPrefs.HasKey(defaultKey) ? defaultKey : "");
+
+        if (!string.IsNullOrEmpty(targetKey))
         {
-            string json = PlayerPrefs.GetString(key, "");
+            string json = PlayerPrefs.GetString(targetKey, "");
             if (!string.IsNullOrEmpty(json))
             {
                 var data = JsonUtility.FromJson<PlayerStateData>(json);
@@ -346,9 +360,12 @@ public class SaveManager : MonoBehaviour
     public static void SaveCharacterState(int classIndex, PlayerStateData state)
     {
         if (state == null) return;
-        string key = CHAR_SAVE_PREFIX + classIndex;
+        string key = GetCharacterSaveKey(classIndex);
         string json = JsonUtility.ToJson(state);
         PlayerPrefs.SetString(key, json);
+
+        // Lưu bản fallback chung
+        PlayerPrefs.SetString(CHAR_SAVE_PREFIX + classIndex, json);
 
         // Lưu thêm vào PlayerPrefs cũ để đồng bộ
         PlayerPrefs.SetInt("SelectedCharacterId", classIndex);
@@ -356,7 +373,54 @@ public class SaveManager : MonoBehaviour
         PlayerPrefs.SetFloat("SelectedPlayerExp_" + classIndex, state.playerExp);
         PlayerPrefs.Save();
 
-        Debug.Log($"[SaveManager] Saved Character {classIndex} Stats: Level={state.playerLevel}, Exp={state.playerExp}, HP={state.health}");
+        Debug.Log($"[SaveManager] Saved Character {classIndex} Stats for Key '{key}': Level={state.playerLevel}, Exp={state.playerExp}, HP={state.health}");
+    }
+
+    public static void ApplySyncedWorldSave(string worldSaveJson)
+    {
+        if (string.IsNullOrEmpty(worldSaveJson)) return;
+        try
+        {
+            var data = JsonUtility.FromJson<WorldSaveData>(worldSaveJson);
+            if (data != null)
+            {
+                var local = LoadWorldSave();
+                if (data.completedQuests != null)
+                {
+                    foreach (var q in data.completedQuests)
+                    {
+                        if (!local.completedQuests.Contains(q)) local.completedQuests.Add(q);
+                    }
+                }
+                if (data.playedCutscenes != null)
+                {
+                    foreach (var c in data.playedCutscenes)
+                    {
+                        if (!local.playedCutscenes.Contains(c)) local.playedCutscenes.Add(c);
+                    }
+                }
+                if (data.defeatedEnemyIds != null)
+                {
+                    foreach (var e in data.defeatedEnemyIds)
+                    {
+                        if (!local.defeatedEnemyIds.Contains(e)) local.defeatedEnemyIds.Add(e);
+                    }
+                }
+                local.hasValidSave = true;
+                local.posX = data.posX;
+                local.posY = data.posY;
+                local.posZ = data.posZ;
+                local.rotY = data.rotY;
+                local.sceneName = data.sceneName;
+                PlayerPrefs.SetString(WORLD_SAVE_KEY, JsonUtility.ToJson(local));
+                PlayerPrefs.Save();
+                Debug.Log($"[SaveManager] Applied synced WorldSave from Server/Host: Quests={local.completedQuests.Count}, Cutscenes={local.playedCutscenes.Count}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[SaveManager] Error applying synced WorldSave: {ex.Message}");
+        }
     }
 
     // =========================================================================

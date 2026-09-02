@@ -210,18 +210,8 @@ public class NetworkBootstrap : MonoBehaviour
                 // Nếu trùng roomId (cùng phòng)
                 if (IsGameStarted)
                 {
-                    // Nếu game đã bắt đầu
-                    if (ActivePlayerNames.Contains(playerName))
-                    {
-                        Debug.Log($"[SERVER] Player '{playerName}' rejoin vào phòng đang chạy game. Cho phép vào thẳng scene.");
-                        // Tự động đồng bộ sang Lobby/Lobby2 thông qua NetworkSceneManager
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[SERVER] Player '{playerName}' không nằm trong danh sách game đã start của phòng này. Từ chối kết nối.");
-                        response.Approved = false;
-                        response.Reason = "Game already in progress.";
-                    }
+                    Debug.Log($"[SERVER] Player '{playerName}' kết nối/rejoin vào phòng đang chạy game. Cho phép vào scene.");
+                    ActivePlayerNames.Add(playerName);
                 }
             }
         }
@@ -252,9 +242,22 @@ public class NetworkBootstrap : MonoBehaviour
     public void StartClientAsPlayer()
     {
         if (NetworkManager.Singleton == null) return;
-        
-        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
+        StartCoroutine(StartClientRoutine());
+    }
+
+    private System.Collections.IEnumerator StartClientRoutine()
+    {
+        // 1. Đảm bảo ngắt sạch phiên kết nối cũ trước khi bắt đầu phiên mới
+        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient || NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
+        {
+            Debug.Log("[NETWORK] Đang ngắt kết nối phiên cũ trước khi vào phòng mới...");
             NetworkManager.Singleton.Shutdown();
+            while (NetworkManager.Singleton.IsListening)
+            {
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.2f);
+        }
 
         // ĐÓNG GÓI JSON CHO CHẮC CHẮN
         var data = new ConnectionPayload {
@@ -287,25 +290,6 @@ public class NetworkBootstrap : MonoBehaviour
             transport.HeartbeatTimeoutMS = 3000;    // 3 giây gửi 1 lần
             transport.ConnectTimeoutMS = 15000;     // 15 giây kết nối ban đầu
         }
-
-        NetworkManager.Singleton.OnClientConnectedCallback += (id) => {
-            Debug.Log("<color=green>[NETWORK] KẾT NỐI VPS THÀNH CÔNG!</color>");
-        };
-        NetworkManager.Singleton.OnClientDisconnectCallback += (id) => {
-            string reason = NetworkManager.Singleton.DisconnectReason;
-            if (string.IsNullOrEmpty(reason))
-            {
-                Debug.Log("<color=red>[NETWORK] KẾT NỐI THẤT BẠI HOẶC BỊ NGẮT! Hãy kiểm tra Port 7777 trên VPS.</color>");
-            }
-            else
-            {
-                Debug.Log($"<color=red>[NETWORK] KẾT NỐI THẤT BẠI HOẶC BỊ NGẮT! Lý do: {reason}</color>");
-            }
-            if (NetworkManager.Singleton.SceneManager != null)
-            {
-                NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
-            }
-        };
 
         // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm (tăng từ 120 lên 300)
         NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 300;

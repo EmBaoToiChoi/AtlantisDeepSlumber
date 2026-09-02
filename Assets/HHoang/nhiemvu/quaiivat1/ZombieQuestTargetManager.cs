@@ -169,11 +169,17 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             SaveManager.MarkQuestCompleted("ZombieQuest");
             EnablePostQuestObjects();
         }
-        else if (isQuestActive.Value && IsPrerequisiteCompleted())
+        else if (isQuestActive.Value)
         {
             isQuestActiveLocal = true;
-            UpdateQuestUI();
+            StartCoroutine(DelayedShowQuestUI());
         }
+    }
+
+    private System.Collections.IEnumerator DelayedShowQuestUI()
+    {
+        yield return new WaitForSeconds(0.6f);
+        UpdateQuestUI();
     }
 
     [ServerRpc(RequireOwnership = false)]
