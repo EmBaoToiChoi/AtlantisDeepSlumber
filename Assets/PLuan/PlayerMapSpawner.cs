@@ -277,37 +277,16 @@ public class PlayerMapSpawner : NetworkBehaviour
             SaveManager.ResetAllStatsForNewGame();
         }
 
-        RefreshAllQuestsOnClient();
     }
 
-    private void RefreshAllQuestsOnClient()
+    private int GetSpawnIndexForClient(ulong clientId)
     {
-        StartCoroutine(RefreshQuestsDelayed());
-    }
-
-    private IEnumerator RefreshQuestsDelayed()
-    {
-        yield return new WaitForSeconds(0.6f);
-
-        var allQuestTriggers = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-        var hud = FindAnyObjectByType<PlayerHUDController>();
-        if (hud == null) yield break;
-
-        foreach (var mb in allQuestTriggers)
+        if (!clientSpawnIndices.TryGetValue(clientId, out int spawnIdx))
         {
-            if (mb is IQuestTrigger qt)
-            {
-                if (qt.IsQuestActive && !qt.IsQuestCompleted)
-                {
-                    hud.ShowQuest(true, mb);
-                    hud.UpdateQuestTitle(qt.QuestTitle, mb);
-                    hud.UpdateQuestDescription(qt.QuestDescription, mb);
-                    hud.UpdateQuestProgress(qt.CurrentProgress, qt.TargetProgress);
-                    Debug.Log($"[PlayerMapSpawner] [CLIENT] Đã tự động hiển thị Quest đang active: {qt.QuestTitle}");
-                    break;
-                }
-            }
+            spawnIdx = clientSpawnIndices.Count;
+            clientSpawnIndices[clientId] = spawnIdx;
         }
+        return spawnIdx;
     }
 
     public void SpawnPlayerForClient(ulong clientId, int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false)

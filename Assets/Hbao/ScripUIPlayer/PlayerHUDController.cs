@@ -374,34 +374,6 @@ public class PlayerHUDController : MonoBehaviour
             LocalPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled; // tránh duplicate
             LocalPlayerTarget.OnQSkillCancelled += HandleQSkillCancelled;
         }
-        StartCoroutine(AutoRefreshActiveQuestCoroutine());
-    }
-
-    private void Start()
-    {
-        InitializeUI();
-        StartCoroutine(AutoRefreshActiveQuestCoroutine());
-    }
-
-    private System.Collections.IEnumerator AutoRefreshActiveQuestCoroutine()
-    {
-        yield return new WaitForSeconds(0.8f);
-        var allMb = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-        foreach (var mb in allMb)
-        {
-            if (mb is IQuestTrigger qt)
-            {
-                if (qt.IsQuestActive && !qt.IsQuestCompleted)
-                {
-                    ShowQuest(true, mb);
-                    UpdateQuestTitle(qt.QuestTitle, mb);
-                    UpdateQuestDescription(qt.QuestDescription, mb);
-                    UpdateQuestProgress(qt.CurrentProgress, qt.TargetProgress);
-                    Debug.Log($"[PlayerHUDController] Auto-refreshed active quest on spawn: {qt.QuestTitle}");
-                    break;
-                }
-            }
-        }
     }
 
     void OnDisable()

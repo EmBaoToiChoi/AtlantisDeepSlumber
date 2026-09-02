@@ -391,7 +391,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         }
     }
 
-    private IEnumerator DelayedShowBridgeQuestUI()
+    private System.Collections.IEnumerator DelayedShowBridgeQuestUI()
     {
         yield return new WaitForSeconds(0.6f);
         if (hasCollapsed.Value && !hasBeenRepaired.Value)
@@ -400,17 +400,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             if (localHud != null)
             {
                 localHud.ShowQuest(true, this);
+                localHud.UpdateQuestTitle("SỬA CẦU SẬP", this);
                 if (isReadyToBuild.Value)
                 {
-                    localHud.UpdateQuestTitle(questBuildTitle, this);
-                    localHud.UpdateQuestDescription(questBuildDescription, this);
-                    localHud.UpdateQuestProgress((int)buildProgress.Value, 100);
+                    localHud.UpdateQuestDescription("Hãy lại gần cầu và nhấn Space để cùng nhau xây dựng", this);
+                    localHud.UpdateQuestProgress((int)buildProgress.Value, 100, this);
                 }
                 else
                 {
-                    localHud.UpdateQuestTitle(questLogsTitle, this);
-                    localHud.UpdateQuestDescription(questLogsDescription, this);
-                    localHud.UpdateQuestProgress(logsSubmitted.Value, requiredLogsToRepair);
+                    int submitted = GetLogsSubmittedCount();
+                    localHud.UpdateQuestDescription("Chặt 16 thanh gỗ để sửa cầu và tiếp tục hành trình.", this);
+                    localHud.UpdateQuestProgress(submitted, requiredLogsToRepair, this);
                 }
             }
         }
