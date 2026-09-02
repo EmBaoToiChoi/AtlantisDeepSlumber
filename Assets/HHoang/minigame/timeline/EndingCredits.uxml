@@ -48,7 +48,7 @@
                 <ui:VisualElement class="credit-section">
                     <ui:Label text="CUTSCENE &amp; CINEMATICS" class="credit-role-header" />
                     <ui:Label text="Hồ Hữu Hoàng" class="credit-person-name" />
-                    <ui:Label text="Nguyễn Nhật Tân" class="credit-person-name" />
+                    <ui:Label text="Nguyễn Duy Tân" class="credit-person-name" />
                     <ui:Label text="Vũ Phạm Luân" class="credit-person-name" />
                 </ui:VisualElement>
 
