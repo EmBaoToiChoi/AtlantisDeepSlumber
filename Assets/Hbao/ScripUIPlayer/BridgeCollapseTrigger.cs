@@ -13,7 +13,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     public bool IsPrerequisiteCompleted()
     {
-        if (prerequisiteQuest == null) return true;
+        if (prerequisiteQuest == null)
+        {
+            var zombieQuest = FindFirstObjectByType<ZombieQuestTargetManager>();
+            if (zombieQuest != null) return zombieQuest.IsQuestCompleted;
+            return true;
+        }
         if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
         if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
         var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>() ?? prerequisiteQuest.GetComponentInChildren<IQuestTrigger>();
