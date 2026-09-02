@@ -246,7 +246,22 @@ public class PlayerMapSpawner : NetworkBehaviour
 
         Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId} (HasCustomPos: {hasCustomPos}, Pos: {customPos}, IsContinueMode: {isContinueMode})");
 
-        if (isContinueMode && hasCustomPos && customPos != Vector3.zero && customPos.sqrMagnitude > 10f)
+        if (!isContinueMode)
+        {
+            serverRoomContinuePos = Vector3.zero;
+            serverRoomContinueRotY = 0f;
+            serverRoomHasContinuePos = false;
+            serverRoomIsContinueMode = false;
+            serverRoomWorldSaveJson = "";
+            SaveManager.IsContinueMode = false;
+            SaveManager.HasPendingSpawnPosition = false;
+            SaveManager.PendingSpawnPosition = Vector3.zero;
+
+            // Đồng bộ trạng thái Chơi Mới xuống toàn bộ Client
+            SyncRoomContinueModeClientRpc(false, Vector3.zero, 0f, "");
+            Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} yêu cầu CHƠI MỚI. Đã reset sạch toàn bộ trạng thái Tiếp tục trên Server.");
+        }
+        else if (isContinueMode && hasCustomPos && customPos != Vector3.zero && customPos.sqrMagnitude > 10f)
         {
             serverRoomContinuePos = customPos;
             serverRoomContinueRotY = customRotY;
