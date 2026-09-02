@@ -1826,6 +1826,15 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private async void LeaveRoom()
     {
         string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
+        if (!string.IsNullOrEmpty(roomId))
+        {
+            _ = AuthService.LeaveRoom(roomId);
+        }
+
+        PlayerPrefs.DeleteKey("CurrentRoomID");
+        PlayerPrefs.DeleteKey("CurrentRoomName");
+        PlayerPrefs.DeleteKey("IsRoomHost");
+        PlayerPrefs.Save();
         
         if (_uiDocument != null)
         {
@@ -1845,9 +1854,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private IEnumerator SafeLeaveRoomRoutine()
     {
         Debug.Log("[Lobby] Đang chờ giải phóng bộ nhớ Netcode an toàn...");
-        // Đợi 2 frame để đảm bảo Unity dọn dẹp sạch sẽ các thực thể mạng trước khi tải cảnh mới
-        yield return null;
-        yield return null;
+        if (NetworkManager.Singleton != null)
+        {
+            while (NetworkManager.Singleton.IsListening)
+            {
+                yield return null;
+            }
+        }
+        yield return new WaitForSeconds(0.2f);
         
         Debug.Log("[Lobby] Đang chuyển sang cảnh MainMenu...");
         if (SceneLoader.Instance != null)

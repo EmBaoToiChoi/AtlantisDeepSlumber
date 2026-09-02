@@ -892,16 +892,25 @@ public class InGamePauseMenu : MonoBehaviour
             _ = AuthService.LeaveRoom(roomId);
         }
 
-        // Tắt kết nối Netcode
+        // Xóa thông tin phòng cũ để phiên sau vào phòng mới hoàn toàn
+        PlayerPrefs.DeleteKey("CurrentRoomID");
+        PlayerPrefs.DeleteKey("CurrentRoomName");
+        PlayerPrefs.DeleteKey("IsRoomHost");
+        PlayerPrefs.Save();
+
+        // Tắt kết nối Netcode và chờ giải phóng socket hoàn toàn
         if (NetworkManager.Singleton != null)
         {
             Debug.Log("[PauseMenu] Đang ngắt kết nối Netcode...");
             NetworkManager.Singleton.Shutdown();
+            while (NetworkManager.Singleton.IsListening)
+            {
+                yield return null;
+            }
         }
 
-        // Đợi 2 frames để dọn sạch tài nguyên
-        yield return null;
-        yield return null;
+        // Chờ thêm 0.2s để Unity Transport đóng socket sạch sẽ
+        yield return new WaitForSeconds(0.2f);
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
