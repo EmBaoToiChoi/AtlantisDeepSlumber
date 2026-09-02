@@ -19,6 +19,12 @@ public class VideoCutsceneController : NetworkBehaviour
     [Tooltip("Danh sách các GameObject muốn ẩn sau khi chạy hết video cutscene (nếu cần ẩn nhiều object)")]
     public List<GameObject> objectsToHideAfterVideo = new List<GameObject>();
 
+    [Header("Activate / Show Object After Cutscene")]
+    [Tooltip("Kéo thả GameObject muốn hiển thị / kích hoạt (SetActive(true)) sau khi chạy hết video cutscene (nếu có thì bật, không có thì bỏ qua)")]
+    public GameObject objectToActivateAfterVideo;
+    [Tooltip("Danh sách các GameObject muốn hiển thị / kích hoạt sau khi chạy hết video cutscene (nếu cần bật nhiều object)")]
+    public List<GameObject> objectsToActivateAfterVideo = new List<GameObject>();
+
     [Header("Teleport & Control")]
     public Transform safeZone; 
     public List<Transform> playerSpots = new List<Transform>();
@@ -104,6 +110,7 @@ public class VideoCutsceneController : NetworkBehaviour
     {
         hasPlayed = true;
         HideObjectsAfterVideo();
+        ActivateObjectsAfterVideo();
         DisableTriggerCollider();
         Debug.Log($"[VideoCutsceneController] [SERVER] Client đã đồng bộ Cutscene '{cutsceneName}' đã xem -> hasPlayed = true");
     }
@@ -118,6 +125,7 @@ public class VideoCutsceneController : NetworkBehaviour
                 hasPlayed = true;
                 Debug.Log($"[VideoCutsceneController] Tiếp Tục Chơi: Cutscene '{GetCutsceneId()}' đã xem rồi, tắt trigger và bỏ qua.");
                 HideObjectsAfterVideo();
+                ActivateObjectsAfterVideo();
                 DisableTriggerCollider();
 
                 if (!IsServer)
@@ -203,6 +211,7 @@ public class VideoCutsceneController : NetworkBehaviour
         FinishCutsceneClientRpc();
 
         HideObjectsAfterVideo();
+        ActivateObjectsAfterVideo();
 
         isPlaying = false;
     }
@@ -273,6 +282,7 @@ public class VideoCutsceneController : NetworkBehaviour
 
         if (objectToHide != null) objectToHide.SetActive(true);
         HideObjectsAfterVideo();
+        ActivateObjectsAfterVideo();
 
         if (blackScreenUI != null) 
         {
@@ -305,6 +315,7 @@ public class VideoCutsceneController : NetworkBehaviour
 
         if (objectToHide != null) objectToHide.SetActive(false);
         HideObjectsAfterVideo();
+        ActivateObjectsAfterVideo();
 
         EndingCreditsUI endingUI = GetComponent<EndingCreditsUI>();
         if (endingUI == null) endingUI = gameObject.AddComponent<EndingCreditsUI>();
@@ -389,6 +400,27 @@ public class VideoCutsceneController : NetworkBehaviour
                 {
                     obj.SetActive(false);
                     Debug.Log($"[VideoCutsceneController] Đã ẩn object sau video: {obj.name}");
+                }
+            }
+        }
+    }
+
+    private void ActivateObjectsAfterVideo()
+    {
+        if (objectToActivateAfterVideo != null)
+        {
+            objectToActivateAfterVideo.SetActive(true);
+            Debug.Log($"[VideoCutsceneController] Đã kích hoạt (active) object sau video: {objectToActivateAfterVideo.name}");
+        }
+
+        if (objectsToActivateAfterVideo != null)
+        {
+            foreach (var obj in objectsToActivateAfterVideo)
+            {
+                if (obj != null)
+                {
+                    obj.SetActive(true);
+                    Debug.Log($"[VideoCutsceneController] Đã kích hoạt (active) object sau video: {obj.name}");
                 }
             }
         }
