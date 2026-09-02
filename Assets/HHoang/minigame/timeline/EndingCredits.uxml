@@ -37,7 +37,7 @@
 
                 <!-- LẬP TRÌNH -->
                 <ui:VisualElement class="credit-section">
-                    <ui:Label text="LẬP TRÌNH HỆ THỐNG &amp; GAMEPLAY" class="credit-role-header" />
+                    <ui:Label text="Game Development" class="credit-role-header" />
                     <ui:Label text="Vũ Phạm Luân" class="credit-person-name" />
                     <ui:Label text="Nguyễn Mạnh Hoài Bảo" class="credit-person-name" />
                     <ui:Label text="Hồ Hữu Hoàng" class="credit-person-name" />
@@ -76,7 +76,7 @@
                 <!-- LỜI CẢM ƠN ĐẶC BIỆT -->
                 <ui:VisualElement class="credit-section">
                     <ui:Label text="LỜI CẢM ƠN ĐẶC BIỆT" class="credit-role-header" />
-                    <ui:Label text="Xin chân thành gửi lời cảm ơn sâu sắc nhất tới:&#10;Cô Hồ Thị Hồng Nga đã tận tình hướng dẫn và đồng hành.&#10;Quý Thầy Cô bộ môn đã chỉ dạy và hỗ trợ nhóm trong suốt quá trình học tập.&#10;Gia đình &amp; Bạn bè đã luôn cổ vũ, động viên." class="credit-desc-text" />
+                    <ui:Label text="Xin chân thành gửi lời cảm ơn sâu sắc nhất tới:&#10;Cô Hồ Thị Hồng Nga đã tận tình hướng dẫn và đồng hành.&#10;Quý Thầy Cô bộ môn đã chỉ dạy và hỗ trợ nhóm trong suốt quá trình học tập.&#10;" class="credit-desc-text" />
                     <ui:Label text="Và đặc biệt là BẠN — Người đã đồng hành cùng Atlantis đến những giây phút cuối cùng!" class="credit-person-name" style="margin-top: 15px; -unity-font-style: bold; color: rgb(255, 220, 120);" />
                 </ui:VisualElement>
 
