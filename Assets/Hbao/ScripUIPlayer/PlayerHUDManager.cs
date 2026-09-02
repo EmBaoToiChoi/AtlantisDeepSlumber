@@ -73,6 +73,7 @@ public class PlayerHUDManager : MonoBehaviour
             if (controller != null)
             {
                 controller.InitializeUI();
+                controller.StartCoroutine(controller.DelayedRefreshActiveQuest());
             }
             Debug.Log($"[PlayerHUDManager] Activated HUD for character class index: {characterId} ({activeHUDObject.name})");
             return controller;

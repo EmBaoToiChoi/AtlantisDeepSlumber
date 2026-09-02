@@ -105,7 +105,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
         
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("WaterFreezeQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("WaterFreezeQuest"))
         {
             isQuestCompleted = true;
             SaveManager.MarkQuestCompleted("WaterFreezeQuest");
@@ -115,7 +115,18 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompleted = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

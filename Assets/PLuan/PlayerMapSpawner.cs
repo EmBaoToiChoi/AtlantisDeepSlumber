@@ -290,12 +290,23 @@ public class PlayerMapSpawner : NetworkBehaviour
             SaveManager.HasPendingSpawnPosition = true;
             SaveManager.PendingSpawnPosition = continuePos;
             SaveManager.PendingSpawnRotationY = continueRotY;
+
+            StartCoroutine(DelayedRefreshQuestOnClientSync());
         }
         else
         {
             SaveManager.ResetAllStatsForNewGame();
         }
+    }
 
+    private IEnumerator DelayedRefreshQuestOnClientSync()
+    {
+        yield return new WaitForSeconds(0.5f);
+        var hud = FindAnyObjectByType<PlayerHUDController>();
+        if (hud != null)
+        {
+            hud.RefreshCurrentActiveQuest();
+        }
     }
 
     private int GetSpawnIndexForClient(ulong clientId)

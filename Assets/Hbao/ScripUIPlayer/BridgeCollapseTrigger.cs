@@ -4,6 +4,8 @@ using UnityEngine.AI;
 
 public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 {
+    public static BridgeCollapseTrigger Instance { get; private set; }
+
     public bool IsQuestCompleted => IsBridgeRepaired();
     public bool IsQuestActive => IsBridgeCollapsed() && !IsBridgeRepaired();
 
@@ -214,6 +216,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Awake()
     {
+        Instance = this;
         if (mainBridgeObject == null)
         {
             if (stableBridgeSegments != null && stableBridgeSegments.Length > 0 && stableBridgeSegments[0] != null)
@@ -421,6 +424,36 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         }
     }
 
+    public void ForceRefreshQuestUI()
+    {
+        PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+        if (localHudCtl == null) return;
+
+        if (IsBridgeCollapsed() && !IsBridgeRepaired() && IsPrerequisiteCompleted())
+        {
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestTitle("SỬA CẦU SẬP", this);
+            if (isReadyToBuild.Value || localReadyToBuild)
+            {
+                localHudCtl.UpdateQuestDescription("Hãy lại gần cầu và nhấn Space để cùng nhau xây dựng", this);
+                localHudCtl.UpdateQuestProgress((int)(buildProgress.Value > 0 ? buildProgress.Value : localBuildProgress), 100, this);
+            }
+            else
+            {
+                int submitted = GetLogsSubmittedCount();
+                localHudCtl.UpdateQuestDescription("Chặt 16 thanh gỗ để sửa cầu và tiếp tục hành trình.", this);
+                localHudCtl.UpdateQuestProgress(submitted, requiredLogsToRepair, this);
+            }
+        }
+        else if (!IsBridgeCollapsed() && !IsBridgeRepaired() && IsPrerequisiteCompleted())
+        {
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestTitle("TIẾP TỤC HÀNH TRÌNH", this);
+            localHudCtl.UpdateQuestDescription("Di chuyển về phía cây cầu phía trước để tiếp tục khám phá.", this);
+            localHudCtl.UpdateQuestProgress(0, 1, this);
+        }
+    }
+
     public override void OnNetworkDespawn()
     {
         hasCollapsed.OnValueChanged -= OnCollapseStateChanged;
@@ -428,6 +461,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         logsSubmitted.OnValueChanged -= OnLogsSubmittedChanged;
         isReadyToBuild.OnValueChanged -= OnReadyToBuildChanged;
         buildProgress.OnValueChanged -= OnBuildProgressChanged;
+    }
+
+    public override void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+        DestroySolidBridgeInstance();
+        base.OnDestroy();
     }
 
     private void OnBuildProgressChanged(float oldVal, float newVal)
@@ -446,11 +486,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 localHud.UpdateQuestProgress(Mathf.RoundToInt(newVal), 100, this);
             }
         }
-    }
-
-    private void OnDestroy()
-    {
-        DestroySolidBridgeInstance();
     }
 
     private void OnReadyToBuildChanged(bool oldVal, bool newVal)

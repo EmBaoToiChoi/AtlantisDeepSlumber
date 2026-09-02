@@ -111,7 +111,7 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("SilasBossQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("SilasBossQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("SilasBossQuest");
@@ -122,7 +122,18 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

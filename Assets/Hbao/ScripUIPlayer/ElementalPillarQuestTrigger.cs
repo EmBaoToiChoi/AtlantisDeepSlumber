@@ -120,7 +120,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         activatedCount.OnValueChanged += OnActivatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalPillarQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalPillarQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("ElementalPillarQuest");
@@ -130,7 +130,18 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

@@ -442,7 +442,7 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         }
     }
 
-    private void UpdateQuestUI()
+    public void UpdateQuestUI()
     {
         if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
 

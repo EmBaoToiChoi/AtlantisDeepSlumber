@@ -111,7 +111,7 @@ public class CrystalPuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         placedCount.OnValueChanged += OnPlacedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("CrystalPuzzleQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("CrystalPuzzleQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("CrystalPuzzleQuest");
@@ -121,7 +121,18 @@ public class CrystalPuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());

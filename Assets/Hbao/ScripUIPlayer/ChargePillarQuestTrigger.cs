@@ -126,7 +126,7 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         chargedCount.OnValueChanged += OnChargedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ChargePillarQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ChargePillarQuest"))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("ChargePillarQuest");
@@ -136,7 +136,18 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 isQuestActive.Value = false;
             }
         }
-        else if (isQuestActive.Value)
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = false;
+                isQuestActive.Value = false;
+            }
+            isQuestCompletedLocal = false;
+            hasTriggeredQuest = false;
+        }
+
+        if (isQuestActive.Value)
         {
             hasTriggeredQuest = true;
             StartCoroutine(DelayedShowQuestUI());
