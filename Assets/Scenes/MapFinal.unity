@@ -2347,6 +2347,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -87927,7 +87928,7 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
-  objectToActivateAfterVideo: {fileID: 772433908}
+  objectToActivateAfterVideo: {fileID: 0}
   objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
@@ -87949,6 +87950,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -167195,7 +167197,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &652873496
 Transform:
   m_ObjectHideFlags: 0
@@ -190799,7 +190801,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &772433909
 Transform:
   m_ObjectHideFlags: 0
@@ -210425,6 +210427,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -213689,6 +213692,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -241444,6 +241448,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -245861,6 +245866,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -279888,6 +279894,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -310130,6 +310137,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6911834658827931775, guid: a4c9e9fc680c04043ad3fd5d51bf546b, type: 3}
+      propertyPath: deathCutscene
+      value: 
+      objectReference: {fileID: 1205511735}
+    - target: {fileID: 6911834658827931775, guid: a4c9e9fc680c04043ad3fd5d51bf546b, type: 3}
+      propertyPath: onBossDeathEvent.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6911834658827931775, guid: a4c9e9fc680c04043ad3fd5d51bf546b, type: 3}
       propertyPath: onBossDeathEvent.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 1205511735}
@@ -326066,6 +326081,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -354040,6 +354056,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -354247,6 +354264,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -418223,6 +418241,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -444716,6 +444735,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 652873496}
     m_Modifications:
+    - target: {fileID: 2050928385180241433, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
+      propertyPath: deathCutscene
+      value: 
+      objectReference: {fileID: 1983171925}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -86.96
@@ -448214,6 +448237,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -456834,6 +456858,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -479974,7 +479999,7 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
-  objectToActivateAfterVideo: {fileID: 652873495}
+  objectToActivateAfterVideo: {fileID: 0}
   objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
@@ -479996,6 +480021,7 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
+  enableTriggerZone: 1
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
