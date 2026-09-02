@@ -1,0 +1,98 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/HHoang/minigame/timeline/EndingCredits.uss" />
+    <ui:VisualElement name="ending-root" class="ending-root-overlay hidden-element" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        <!-- NỀN ĐEN ĐẶC TUYỆT ĐỐI (DÀNH CHO EPILOGUE) -->
+        <ui:VisualElement name="dark-background" class="dark-background" />
+
+        <!-- GIAI ĐOẠN 1: DÒNG CHỮ LẮNG ĐỌNG TRÊN MÀN HÌNH ĐEN (KHÔNG CÓ ẢNH NỀN) -->
+        <ui:VisualElement name="epilogue-panel" class="epilogue-panel hidden-element">
+            <ui:VisualElement class="quote-ornament" />
+            <ui:Label name="lbl-epilogue-quote" text="&quot;Vực sâu nuốt chửng ánh sáng...&#10;Nhưng giấc ngủ ngàn năm của Atlantis mới chỉ vừa bắt đầu.&quot;" class="epilogue-quote-text" />
+            <ui:VisualElement class="quote-ornament" />
+        </ui:VisualElement>
+
+        <!-- GIAI ĐOẠN 2: BẢNG ROLLING CREDITS (CÓ ẢNH NỀN MAINMENU) -->
+        <ui:VisualElement name="credits-viewport" class="credits-viewport hidden-element">
+            <!-- ẢNH NỀN MAINMENU CHỈ HIỆN Ở PHẦN CREDIT -->
+            <ui:VisualElement name="credits-bg-image" class="credits-bg-image" />
+            <ui:VisualElement name="credits-scrim" class="credits-scrim" />
+
+            <ui:VisualElement name="credits-scroll-container" class="credits-scroll-container">
+                <ui:Label text="ATLANTIS: DEEP SLUMBER" class="credit-title" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Cinzel-Vietnamese.ttf?fileID=12800000&amp;guid=4966498178150c646a409e8a412cfd36&amp;type=3#Cinzel-Vietnamese&quot;);" />
+                <ui:Label text="ĐỒ ÁN TỐT NGHIỆP" class="credit-project-type" />
+                <ui:Label text="CAO ĐẲNG FPT POLYTECHNIC" class="credit-school-name" />
+                <ui:VisualElement class="credit-divider" />
+
+                <!-- NHÓM PHÁT TRIỂN -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="NHÓM PHÁT TRIỂN" class="credit-role-header" />
+                    <ui:Label text="HIGH FIVE TIDES" class="credit-group-name" />
+                </ui:VisualElement>
+
+                <!-- GIẢNG VIÊN HƯỚNG DẪN -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="GIẢNG VIÊN HƯỚNG DẪN" class="credit-role-header" />
+                    <ui:Label text="Cô Hồ Thị Hồng Nga" class="credit-person-name" />
+                </ui:VisualElement>
+
+                <!-- LẬP TRÌNH -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="LẬP TRÌNH HỆ THỐNG &amp; GAMEPLAY" class="credit-role-header" />
+                    <ui:Label text="Vũ Phạm Luân" class="credit-person-name" />
+                    <ui:Label text="Nguyễn Mạnh Hoài Bảo" class="credit-person-name" />
+                    <ui:Label text="Hồ Hữu Hoàng" class="credit-person-name" />
+                    <ui:Label text="Huỳnh Nhật Đông" class="credit-person-name" />
+                </ui:VisualElement>
+
+                <!-- CUTSCENE -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="CUTSCENE &amp; CINEMATICS" class="credit-role-header" />
+                    <ui:Label text="Hồ Hữu Hoàng" class="credit-person-name" />
+                    <ui:Label text="Nguyễn Nhật Tân" class="credit-person-name" />
+                    <ui:Label text="Vũ Phạm Luân" class="credit-person-name" />
+                </ui:VisualElement>
+
+                <!-- CỐT TRUYỆN -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="CỐT TRUYỆN &amp; KỊCH BẢN" class="credit-role-header" />
+                    <ui:Label text="High Five Tides" class="credit-person-name" />
+                </ui:VisualElement>
+
+                <!-- TÀI NGUYÊN 3D -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="TÀI NGUYÊN 3D, HIỆU ỨNG &amp; MÔI TRƯỜNG" class="credit-role-header" />
+                    <ui:Label text="Unity Asset Store &amp; Online Creators Community" class="credit-person-name" />
+                    <ui:Label text="(Bản quyền thương mại &amp; Sưu tầm)" class="credit-desc-text" />
+                </ui:VisualElement>
+
+                <!-- ÂM THANH -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="ÂM THANH &amp; NHẠC NỀN" class="credit-role-header" />
+                    <ui:Label text="Freesound Community &amp; Royalty-Free Audio Artists" class="credit-person-name" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="credit-divider" />
+
+                <!-- LỜI CẢM ƠN ĐẶC BIỆT -->
+                <ui:VisualElement class="credit-section">
+                    <ui:Label text="LỜI CẢM ƠN ĐẶC BIỆT" class="credit-role-header" />
+                    <ui:Label text="Xin chân thành gửi lời cảm ơn sâu sắc nhất tới:&#10;Cô Hồ Thị Hồng Nga đã tận tình hướng dẫn và đồng hành.&#10;Quý Thầy Cô bộ môn đã chỉ dạy và hỗ trợ nhóm trong suốt quá trình học tập.&#10;Gia đình &amp; Bạn bè đã luôn cổ vũ, động viên." class="credit-desc-text" />
+                    <ui:Label text="Và đặc biệt là BẠN — Người đã đồng hành cùng Atlantis đến những giây phút cuối cùng!" class="credit-person-name" style="margin-top: 15px; -unity-font-style: bold; color: rgb(255, 220, 120);" />
+                </ui:VisualElement>
+
+                <ui:Label text="THANK YOU FOR PLAYING!" class="credit-thank-you" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Cinzel-Vietnamese.ttf?fileID=12800000&amp;guid=4966498178150c646a409e8a412cfd36&amp;type=3#Cinzel-Vietnamese&quot;);" />
+            </ui:VisualElement>
+
+            <!-- NÚT BỎ QUA THIẾT KẾ KHÉO LÉO -->
+            <ui:Button name="btn-skip-credits" class="btn-skip-credits">
+                <ui:VisualElement class="skip-btn-inner">
+                    <ui:VisualElement class="skip-key-badge">
+                        <ui:Label text="ESC" class="skip-key-text" />
+                    </ui:VisualElement>
+                    <ui:Label text="BỎ QUA" class="skip-btn-label" />
+                    <ui:Label text="▸▸" class="skip-arrow-text" />
+                </ui:VisualElement>
+            </ui:Button>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
