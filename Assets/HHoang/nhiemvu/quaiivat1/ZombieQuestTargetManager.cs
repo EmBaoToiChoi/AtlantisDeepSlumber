@@ -163,11 +163,10 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             if (IsServer)
             {
                 isQuestCompleted.Value = false;
-                isQuestActive.Value = false;
                 currentKills.Value = 0;
+                StartQuest();
             }
             isQuestCompletedLocal = false;
-            isQuestActiveLocal = false;
             localKills = 0;
         }
 
@@ -181,7 +180,7 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             SaveManager.MarkQuestCompleted("ZombieQuest");
             EnablePostQuestObjects();
         }
-        else if (isQuestActive.Value)
+        else if (isQuestActive.Value || isQuestActiveLocal)
         {
             isQuestActiveLocal = true;
             StartCoroutine(DelayedShowQuestUI());
@@ -283,7 +282,14 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             totalKillsNeeded = zombieTargets.Count;
             return totalKillsNeeded;
         }
-        return totalKillsNeeded;
+        var allReporters = FindObjectsByType<DestroyReporter>(FindObjectsSortMode.None);
+        if (allReporters != null && allReporters.Length > 0)
+        {
+            zombieTargets = new List<DestroyReporter>(allReporters);
+            totalKillsNeeded = zombieTargets.Count;
+            return totalKillsNeeded;
+        }
+        return 6;
     }
 
     public void StartQuest()
@@ -302,21 +308,28 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             return;
         }
 
-        if (IsQuestCompleted || IsQuestActive) return;
+        if (IsQuestCompleted) return;
 
         totalKillsNeeded = GetTotalKillsNeeded();
-        if (totalKillsNeeded == 0)
+        if (zombieTargets == null || zombieTargets.Count == 0)
         {
-            Debug.LogError($"[ZombieQuest] LỖI: Danh sách ZombieTargets trống!");
-            return;
+            var allReporters = FindObjectsByType<DestroyReporter>(FindObjectsSortMode.None);
+            if (allReporters != null && allReporters.Length > 0)
+            {
+                zombieTargets = new List<DestroyReporter>(allReporters);
+                totalKillsNeeded = zombieTargets.Count;
+            }
         }
 
-        foreach (var zombie in zombieTargets)
+        if (zombieTargets != null)
         {
-            if (zombie != null)
+            foreach (var zombie in zombieTargets)
             {
-                zombie.OnTargetDestroyed.RemoveListener(OnZombieKilledServer);
-                zombie.OnTargetDestroyed.AddListener(OnZombieKilledServer);
+                if (zombie != null)
+                {
+                    zombie.OnTargetDestroyed.RemoveListener(OnZombieKilledServer);
+                    zombie.OnTargetDestroyed.AddListener(OnZombieKilledServer);
+                }
             }
         }
 

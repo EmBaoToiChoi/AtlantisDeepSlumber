@@ -26,6 +26,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
     [SerializeField] private float spotlightIntensity = 1.8f;
     [SerializeField] private bool useCharacterTheming = false;
 
+    public static Dictionary<ulong, int> SavedPlayerSelections = new Dictionary<ulong, int>();
+
     private LobbySpotlightBeam[] _slotBeams = new LobbySpotlightBeam[4];
     private int[] _lastSlotCharacterIds = new int[] { -1, -1, -1, -1 };
 
@@ -1264,6 +1266,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
                 p.CharacterId = characterId;
                 p.IsReady = false; // Bắt buộc hủy ready khi đổi nhân vật
                 NetPlayers[i] = p;
+                SavedPlayerSelections[clientId] = characterId;
                 Debug.Log($"[SERVER] Đã cập nhật CharacterId={characterId} cho Client {clientId}");
                 
                 // Respawn mô hình 3D cho client này trên Server

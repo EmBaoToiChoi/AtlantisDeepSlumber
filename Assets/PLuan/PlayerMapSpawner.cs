@@ -208,8 +208,8 @@ public class PlayerMapSpawner : NetworkBehaviour
 
     private IEnumerator DelayedAutoSpawnForClient(ulong clientId)
     {
-        // Đợi 2.5 giây cho Client gửi RequestSpawnPlayerServerRpc
-        yield return new WaitForSeconds(2.5f);
+        // Đợi 5.0 giây cho Client gửi RequestSpawnPlayerServerRpc
+        yield return new WaitForSeconds(5.0f);
 
         if (!IsServer) yield break;
         if (NetworkManager.Singleton == null) yield break;
@@ -218,8 +218,13 @@ public class PlayerMapSpawner : NetworkBehaviour
         {
             if (client.PlayerObject == null)
             {
-                Debug.LogWarning($"[PlayerMapSpawner] [SERVER] Client {clientId} chưa có PlayerObject sau thời gian chờ. Tự động fallback spawn...");
-                SpawnPlayerForClient(clientId, 0);
+                int fallbackChar = 0;
+                if (NetworkWaitingRoom.SavedPlayerSelections.TryGetValue(clientId, out int savedChar))
+                {
+                    fallbackChar = savedChar;
+                }
+                Debug.LogWarning($"[PlayerMapSpawner] [SERVER] Client {clientId} chưa có PlayerObject sau thời gian chờ. Tự động fallback spawn nhân vật ID {fallbackChar}...");
+                SpawnPlayerForClient(clientId, fallbackChar);
             }
             else
             {
@@ -234,6 +239,11 @@ public class PlayerMapSpawner : NetworkBehaviour
         if (!IsServer) return;
 
         ulong clientId = rpcParams.Receive.SenderClientId;
+        if (characterId == 0 && NetworkWaitingRoom.SavedPlayerSelections.TryGetValue(clientId, out int chosenChar))
+        {
+            characterId = chosenChar;
+        }
+
         Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId} (HasCustomPos: {hasCustomPos}, Pos: {customPos}, IsContinueMode: {isContinueMode})");
 
         if (isContinueMode && hasCustomPos && customPos != Vector3.zero && customPos.sqrMagnitude > 10f)
