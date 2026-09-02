@@ -2325,6 +2325,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1875619655}
@@ -2345,7 +2347,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -87344,7 +87345,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7456592111370529670, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7795998859394036028, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
       propertyPath: m_LocalScale.x
@@ -87410,11 +87411,6 @@ PrefabInstance:
 --- !u!4 &356229091 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7795998859394036028, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
-  m_PrefabInstance: {fileID: 356229090}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &356229092 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7456592111370529670, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
   m_PrefabInstance: {fileID: 356229090}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &356708479
@@ -87931,6 +87927,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 772433908}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1071002085}
@@ -87951,7 +87949,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -90501,7 +90498,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &372385974
 Transform:
   m_ObjectHideFlags: 0
@@ -167198,7 +167195,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &652873496
 Transform:
   m_ObjectHideFlags: 0
@@ -190802,7 +190799,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &772433909
 Transform:
   m_ObjectHideFlags: 0
@@ -210406,6 +210403,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 2137409691}
@@ -210426,7 +210425,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -213669,6 +213667,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 727448203}
@@ -213689,7 +213689,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -241423,6 +241422,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 977866779}
@@ -241443,7 +241444,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -245839,6 +245839,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1615811352}
@@ -245859,7 +245861,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -279865,6 +279866,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 772433908}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 2145294592}
@@ -279885,7 +279888,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -299079,7 +299081,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7456592111370529670, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7795998859394036028, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
       propertyPath: m_LocalScale.x
@@ -299145,11 +299147,6 @@ PrefabInstance:
 --- !u!4 &1308352107 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7795998859394036028, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
-  m_PrefabInstance: {fileID: 1308352106}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1308352108 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7456592111370529670, guid: d87d0b763f89fc34d83409fc374d43ee, type: 3}
   m_PrefabInstance: {fileID: 1308352106}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1308508117
@@ -326047,6 +326044,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 372385973}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 2110565550}
@@ -326067,7 +326066,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -345138,8 +345136,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   cutsceneController: {fileID: 1427737984}
-  DaChanCua1: {fileID: 356229092}
-  DaChanCua2: {fileID: 1308352108}
+  DaChanCua1: {fileID: 0}
+  DaChanCua2: {fileID: 0}
   daChanCuaChuaRoi: {fileID: 2052709952}
 --- !u!114 &1507205252
 MonoBehaviour:
@@ -354020,6 +354018,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1538569669}
@@ -354040,7 +354040,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -354226,6 +354225,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 739779407}
@@ -354246,7 +354247,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -418205,6 +418205,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 0}
   playerSpots: []
   scriptNamesToDisable:
@@ -418221,7 +418223,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -444717,7 +444718,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -83.63
+      value: -86.96
       objectReference: {fileID: 0}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.y
@@ -444725,7 +444726,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 40.73
+      value: 85
       objectReference: {fileID: 0}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalRotation.w
@@ -448189,8 +448190,10 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
-  objectToHideAfterVideo: {fileID: 0}
+  objectToHideAfterVideo: {fileID: 652873495}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 0}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1583245505}
@@ -448211,7 +448214,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -456765,7 +456767,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   objectsToToggle:
-  - {fileID: 734875702}
+  - {fileID: 0}
   - {fileID: 957689697}
   - {fileID: 236216102}
   - {fileID: 491192444}
@@ -456810,6 +456812,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 734875702}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 40409821}
@@ -456830,7 +456834,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -479971,6 +479974,8 @@ MonoBehaviour:
   objectToHide: {fileID: 213304978}
   objectToHideAfterVideo: {fileID: 0}
   objectsToHideAfterVideo: []
+  objectToActivateAfterVideo: {fileID: 652873495}
+  objectsToActivateAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1070900448}
@@ -479991,7 +479996,6 @@ MonoBehaviour:
   creditScrollSpeed: 65
   creditLoopCount: 2
   endingMusic: {fileID: 0}
-  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0

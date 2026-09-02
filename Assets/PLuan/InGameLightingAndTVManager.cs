@@ -72,7 +72,6 @@ public class InGameLightingAndTVManager : MonoBehaviour
         SetupPlayerLight();
         FindPostProcessing();
         ApplyLightingState();
-        ShowToast("💡 Lighting Manager Đã Sẵn Sàng (F7: TV Mode | F8/F6: Tăng/Giảm sáng)");
     }
 
     private void Update()

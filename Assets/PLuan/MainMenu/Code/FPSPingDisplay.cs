@@ -14,7 +14,7 @@ public class FPSPingDisplay : MonoBehaviour
     }
 
     [Header("Display Settings")]
-    [SerializeField] private DisplayMode _currentMode = DisplayMode.Detailed;
+    [SerializeField] private DisplayMode _currentMode = DisplayMode.Hidden;
     [SerializeField] private KeyCode _toggleKey = KeyCode.F3; // Phím F3 để đổi chế độ
 
     private float _fps = 0f;
