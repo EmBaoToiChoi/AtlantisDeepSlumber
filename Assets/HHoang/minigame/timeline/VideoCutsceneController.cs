@@ -1,7 +1,11 @@
 using UnityEngine;
 using UnityEngine.Video;
 using Unity.Netcode;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.UI;
+using TMPro;
+using UnityEngine.SceneManagement;
 
 public class VideoCutsceneController : NetworkBehaviour
 {
@@ -25,6 +29,30 @@ public class VideoCutsceneController : NetworkBehaviour
     [Tooltip("Bật tùy chọn này để VideoCutsceneController KHÔNG thực hiện bất kỳ lượt Teleport nào (để script bên ngoài như Minigame 4 tự quản lý teleport)")]
     public bool disableTeleport = false;
 
+    [Header("Final Ending & Credits")]
+    [Tooltip("Bật tùy chọn này nếu đây là Cutscene Cuối Cùng của game để chạy Epilogue (màn hình đen) + Credits + Quay về Menu")]
+    public bool isFinalEndingCutscene = false;
+
+    [TextArea(2, 5)]
+    [Tooltip("Dòng chữ lắng đọng hiển thị trên màn hình đen sau khi hết video")]
+    public string epilogueQuote = "Vực sâu nuốt chửng ánh sáng...\nNhưng giấc ngủ ngàn năm của Atlantis mới chỉ vừa bắt đầu.";
+
+    [Tooltip("Thời gian hiển thị dòng chữ epilogue (giây)")]
+    public float epilogueDuration = 5f;
+
+    [Tooltip("Tốc độ cuộn của bảng Credit")]
+    public float creditScrollSpeed = 65f;
+
+    [Tooltip("Số lượt chạy lặp lại Credit trước khi tự động về MainMenu")]
+    [Range(1, 10)]
+    public int creditLoopCount = 2;
+
+    [Tooltip("Âm thanh / Nhạc nền phát trong lúc chạy Credit (tùy chọn)")]
+    public AudioClip endingMusic;
+
+    [Tooltip("UI Canvas Credit tùy chỉnh nếu bạn muốn tự kéo thả (nếu để trống, hệ thống sẽ TỰ ĐỘNG TẠO giao diện Ending đẹp mắt)")]
+    public GameObject customEndingCanvas;
+
     [Header("Security")]
     public bool playOnlyOnce = true;
     public bool hasPlayed = false;
@@ -35,15 +63,18 @@ public class VideoCutsceneController : NetworkBehaviour
     
     private bool serverReceivedFinishSignal = false;
     private bool hasRequestedSkip = false;
+    private bool isEndingSequenceActive = false;
+    private bool isExitingToMenu = false;
 
-    // [ĐÃ THÊM] Danh sách lưu trữ ID của các người chơi đang đứng trong vùng Trigger
+    // Danh sách lưu trữ ID của các người chơi đang đứng trong vùng Trigger
     private HashSet<ulong> playersInZone = new HashSet<ulong>();
 
     private void Update()
     {
         if (!IsSpawned) return;
 
-        if (videoUI != null && videoUI.activeSelf && !hasRequestedSkip)
+        // Bỏ qua cutscene video thông thường bằng phím ESC
+        if (videoUI != null && videoUI.activeSelf && !hasRequestedSkip && !isEndingSequenceActive)
         {
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -56,6 +87,16 @@ public class VideoCutsceneController : NetworkBehaviour
                 }
 
                 ReportFinishToServerRpc();
+            }
+        }
+
+        // Bỏ qua phần Ending Credits bằng phím ESC hoặc Space
+        if (isEndingSequenceActive && !isExitingToMenu)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space))
+            {
+                Debug.Log("[VideoCutscene] Phát hiện ESC/Space trong lúc chạy Ending Credits -> Chuyển về Menu chính!");
+                ReturnToMainMenu();
             }
         }
     }
@@ -126,7 +167,7 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void StartCutsceneServer()
     {
-        Debug.Log($"[PUZZLE4_DEBUG] VideoCutsceneController.StartCutsceneServer được gọi. isPlaying: {isPlaying}, disableTeleport: {disableTeleport}");
+        Debug.Log($"[VideoCutsceneController] StartCutsceneServer được gọi. isPlaying: {isPlaying}, isFinalEnding: {isFinalEndingCutscene}");
         if (isPlaying || (playOnlyOnce && hasPlayed)) return;
         isPlaying = true;
         hasPlayed = true; 
@@ -139,7 +180,7 @@ public class VideoCutsceneController : NetworkBehaviour
         StartCoroutine(WaitAndTeleportAndFinish());
     }
 
-    private System.Collections.IEnumerator WaitAndTeleportAndFinish()
+    private IEnumerator WaitAndTeleportAndFinish()
     {
         yield return new WaitForSeconds(1f); // Đợi 1 giây để màn hình đen từ từ hiện lên hết
 
@@ -150,9 +191,8 @@ public class VideoCutsceneController : NetworkBehaviour
             targetClientIds[i] = NetworkManager.Singleton.ConnectedClientsList[i].ClientId;
         }
 
-        if (!disableTeleport && safeZone != null)
+        if (!disableTeleport && safeZone != null && !isFinalEndingCutscene)
         {
-            Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController gọi TeleportToSafeZoneClientRpc...");
             TeleportToSafeZoneClientRpc(targetClientIds);
         }
 
@@ -160,12 +200,20 @@ public class VideoCutsceneController : NetworkBehaviour
 
         yield return new WaitUntil(() => serverReceivedFinishSignal);
 
-        Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController đã nhận signal kết thúc video (serverReceivedFinishSignal = true).");
+        Debug.Log("[VideoCutsceneController] Đã nhận tín hiệu kết thúc video (serverReceivedFinishSignal = true).");
         StopVideoClientRpc();
+
+        // NẾU LÀ CUTSCENE CUỐI CÙNG -> CHUYỂN SANG LUỒNG ENDING & CREDITS
+        if (isFinalEndingCutscene)
+        {
+            Debug.Log("[VideoCutsceneController] Kích hoạt Chuỗi Kết Thúc Ending & Credits cho toàn bộ phòng!");
+            StartEndingSequenceClientRpc();
+            isPlaying = false;
+            yield break;
+        }
 
         if (!disableTeleport && playerSpots != null && playerSpots.Count > 0)
         {
-            Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController gọi TeleportAllPlayersClientRpc...");
             TeleportAllPlayersClientRpc(targetClientIds);
         }
 
@@ -174,22 +222,16 @@ public class VideoCutsceneController : NetworkBehaviour
 
         HideObjectsAfterVideo();
 
-        // QUAN TRỌNG: Trên Dedicated Server, ClientRpc KHÔNG chạy trên server,
-        // nên isPlaying sẽ không được set false. Ta phải tự set ở đây.
         isPlaying = false;
-        Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController: Server đã set isPlaying = false sau FinishCutsceneClientRpc.");
     }
 
     [ClientRpc]
     private void PrepareCutsceneClientRpc()
     {
         TogglePlayerMovement(false); 
-        CameraShakeHelper.StopShake(); // Dừng ngay mọi rung lắc camera để chuẩn bị cutscene mượt mà
-
-        // Tắt camera follow để camera không bị giật hay lia văng qua chỗ khác khi chuyển cảnh
+        CameraShakeHelper.StopShake(); 
         SetLocalPlayerCameraFollow(false);
         
-        // Làm mờ dần màn hình thành đen đặc (alpha từ 0 -> 1) trong 0.6 giây
         if (blackScreenUI != null) 
         {
             StartCoroutine(FadeCanvasGroup(blackScreenUI, 0f, 1f, 0.6f, false));
@@ -198,7 +240,6 @@ public class VideoCutsceneController : NetworkBehaviour
         if (objectToHide != null) objectToHide.SetActive(false);
         if (videoPlayer != null) videoPlayer.Prepare(); 
 
-        // Tắt nhạc nền game để nghe âm thanh video cutscene
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.SetCutsceneActive(true, 0.4f);
@@ -249,11 +290,8 @@ public class VideoCutsceneController : NetworkBehaviour
         DisableTriggerCollider();
 
         if (objectToHide != null) objectToHide.SetActive(true);
-        
-        // Ẩn các object được chỉ định sau khi video kết thúc (nếu có)
         HideObjectsAfterVideo();
 
-        // Làm sáng dần màn hình (alpha từ 1 -> 0) trong 1 giây, sau đó tắt hẳn object
         if (blackScreenUI != null) 
         {
             StartCoroutine(FadeCanvasGroup(blackScreenUI, 1f, 0f, 1f, true));
@@ -263,11 +301,362 @@ public class VideoCutsceneController : NetworkBehaviour
         TogglePlayerMovement(true);
         isPlaying = false;
 
-        // Khôi phục lại nhạc nền ambient nhỏ sau khi video kết thúc
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.SetCutsceneActive(false, 1.2f);
         }
+    }
+
+    // =========================================================================
+    // LUỒNG ENDING, MÀN HÌNH ĐEN, CREDITS & QUAY VỀ MAIN MENU
+    // =========================================================================
+
+    [ClientRpc]
+    private void StartEndingSequenceClientRpc()
+    {
+        SaveManager.MarkCutscenePlayed(GetCutsceneId());
+        hasPlayed = true;
+        DisableTriggerCollider();
+
+        isEndingSequenceActive = true;
+        isExitingToMenu = false;
+
+        TogglePlayerMovement(false);
+        SetLocalPlayerCameraFollow(false);
+
+        if (objectToHide != null) objectToHide.SetActive(false);
+        HideObjectsAfterVideo();
+
+        // Mở khóa chuột để người chơi có thể bấm nút Bỏ Qua
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        PlayerHUDController.isAnyUIOpen = true;
+
+        StartCoroutine(EndingSequenceRoutine());
+    }
+
+    private IEnumerator EndingSequenceRoutine()
+    {
+        // 1. Đảm bảo màn hình đen hiển thị hoàn toàn
+        if (blackScreenUI != null)
+        {
+            blackScreenUI.SetActive(true);
+            CanvasGroup bgCg = blackScreenUI.GetComponent<CanvasGroup>();
+            if (bgCg == null) bgCg = blackScreenUI.AddComponent<CanvasGroup>();
+            bgCg.alpha = 1f;
+        }
+
+        // Tạo hoặc chuẩn bị Canvas Ending
+        GameObject endingCanvasObj = customEndingCanvas;
+
+        if (endingCanvasObj == null)
+        {
+            endingCanvasObj = BuildDynamicEndingUI();
+        }
+        else
+        {
+            endingCanvasObj.SetActive(true);
+        }
+
+        CanvasGroup canvasGroup = endingCanvasObj.GetComponent<CanvasGroup>();
+        if (canvasGroup == null) canvasGroup = endingCanvasObj.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+
+        // Phát nhạc Ending nếu có
+        AudioSource endingAudioSource = null;
+        if (endingMusic != null)
+        {
+            endingAudioSource = endingCanvasObj.AddComponent<AudioSource>();
+            endingAudioSource.clip = endingMusic;
+            endingAudioSource.loop = true;
+            endingAudioSource.volume = 0.8f;
+            endingAudioSource.Play();
+        }
+
+        // Tìm các thành phần UI
+        Transform epiloguePanel = endingCanvasObj.transform.Find("EpiloguePanel");
+        Transform creditsPanel = endingCanvasObj.transform.Find("CreditsPanel");
+        Transform skipBtnTransform = endingCanvasObj.transform.Find("SkipButton");
+        RectTransform creditsContainer = creditsPanel != null ? creditsPanel.Find("CreditsContainer") as RectTransform : null;
+
+        if (skipBtnTransform != null)
+        {
+            Button skipBtn = skipBtnTransform.GetComponent<Button>();
+            if (skipBtn != null)
+            {
+                skipBtn.onClick.RemoveAllListeners();
+                skipBtn.onClick.AddListener(() => ReturnToMainMenu());
+            }
+        }
+
+        // ==========================================
+        // GIAI ĐOẠN 1: HIỆN DÒNG CHỮ LẮNG ĐỌNG (EPILOGUE QUOTE)
+        // ==========================================
+        if (epiloguePanel != null)
+        {
+            epiloguePanel.gameObject.SetActive(true);
+            if (creditsPanel != null) creditsPanel.gameObject.SetActive(false);
+
+            CanvasGroup epiCg = epiloguePanel.GetComponent<CanvasGroup>();
+            if (epiCg == null) epiCg = epiloguePanel.gameObject.AddComponent<CanvasGroup>();
+
+            // Fade in dòng chữ trong 1.5s
+            float t = 0;
+            while (t < 1.5f && !isExitingToMenu)
+            {
+                t += Time.unscaledDeltaTime;
+                epiCg.alpha = Mathf.Lerp(0f, 1f, t / 1.5f);
+                yield return null;
+            }
+            epiCg.alpha = 1f;
+
+            // Giữ hiển thị trong epilogueDuration giây
+            float holdTime = 0;
+            while (holdTime < epilogueDuration && !isExitingToMenu)
+            {
+                holdTime += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            // Fade out dòng chữ trong 1.2s
+            t = 0;
+            while (t < 1.2f && !isExitingToMenu)
+            {
+                t += Time.unscaledDeltaTime;
+                epiCg.alpha = Mathf.Lerp(1f, 0f, t / 1.2f);
+                yield return null;
+            }
+            epiCg.alpha = 0f;
+            epiloguePanel.gameObject.SetActive(false);
+        }
+
+        if (isExitingToMenu) yield break;
+
+        yield return new WaitForSecondsRealtime(0.5f);
+
+        // ==========================================
+        // GIAI ĐOẠN 2: CHẠY BẢNG CREDITS CUỘN
+        // ==========================================
+        if (creditsPanel != null && creditsContainer != null)
+        {
+            creditsPanel.gameObject.SetActive(true);
+
+            float startY = -Screen.height - 200f;
+            float endY = creditsContainer.rect.height + Screen.height + 200f;
+            int loopsCompleted = 0;
+
+            creditsContainer.anchoredPosition = new Vector2(creditsContainer.anchoredPosition.x, startY);
+
+            while (loopsCompleted < creditLoopCount && !isExitingToMenu)
+            {
+                float currentY = creditsContainer.anchoredPosition.y;
+                currentY += creditScrollSpeed * Time.unscaledDeltaTime * 1.5f;
+                creditsContainer.anchoredPosition = new Vector2(creditsContainer.anchoredPosition.x, currentY);
+
+                if (currentY >= endY)
+                {
+                    loopsCompleted++;
+                    Debug.Log($"[VideoCutsceneController] Hoàn thành {loopsCompleted}/{creditLoopCount} lượt chạy Credit.");
+                    creditsContainer.anchoredPosition = new Vector2(creditsContainer.anchoredPosition.x, startY);
+                    yield return new WaitForSecondsRealtime(0.5f);
+                }
+
+                yield return null;
+            }
+        }
+        else
+        {
+            // Nếu không có panel credit, chờ 5s rồi về Menu
+            yield return new WaitForSecondsRealtime(5f);
+        }
+
+        if (!isExitingToMenu)
+        {
+            ReturnToMainMenu();
+        }
+    }
+
+    public void ReturnToMainMenu()
+    {
+        if (isExitingToMenu) return;
+        isExitingToMenu = true;
+        Debug.Log("[VideoCutsceneController] Đang thực hiện quay về MainMenu...");
+
+        StartCoroutine(QuitToMainMenuRoutine());
+    }
+
+    private IEnumerator QuitToMainMenuRoutine()
+    {
+        // Rời phòng online nếu có
+        string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
+        if (!string.IsNullOrEmpty(roomId))
+        {
+            _ = AuthService.LeaveRoom(roomId);
+        }
+
+        // Tắt Netcode
+        if (NetworkManager.Singleton != null)
+        {
+            Debug.Log("[VideoCutsceneController] Ngắt kết nối NetworkManager...");
+            NetworkManager.Singleton.Shutdown();
+        }
+
+        yield return null;
+        yield return null;
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        PlayerHUDController.isAnyUIOpen = false;
+
+        if (SceneLoader.Instance != null)
+        {
+            _ = SceneLoader.Instance.LoadSceneAsync("MainMenu", "CẢM ƠN BẠN ĐÃ TRẢI NGHIỆM TRÒ CHƠI...");
+        }
+        else
+        {
+            SceneManager.LoadScene("MainMenu");
+        }
+    }
+
+    // =========================================================================
+    // HÀM TẠO DYNAMIC UI CHO ENDING & CREDITS
+    // =========================================================================
+    private GameObject BuildDynamicEndingUI()
+    {
+        GameObject canvasObj = new GameObject("Ending_Credits_Canvas");
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 9998;
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        // 1. Background màu đen
+        GameObject bgObj = new GameObject("DarkBackground");
+        bgObj.transform.SetParent(canvasObj.transform, false);
+        Image bgImg = bgObj.AddComponent<Image>();
+        bgImg.color = new Color(0.02f, 0.03f, 0.05f, 0.98f);
+        RectTransform bgRect = bgObj.GetComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.sizeDelta = Vector2.zero;
+
+        // 2. Epilogue Panel
+        GameObject epiObj = new GameObject("EpiloguePanel");
+        epiObj.transform.SetParent(canvasObj.transform, false);
+        RectTransform epiRect = epiObj.AddComponent<RectTransform>();
+        epiRect.anchorMin = Vector2.zero;
+        epiRect.anchorMax = Vector2.one;
+        epiRect.sizeDelta = Vector2.zero;
+        epiObj.AddComponent<CanvasGroup>();
+
+        GameObject epiTextObj = new GameObject("EpilogueText");
+        epiTextObj.transform.SetParent(epiObj.transform, false);
+        TextMeshProUGUI epiTmp = epiTextObj.AddComponent<TextMeshProUGUI>();
+        epiTmp.text = $"<i><color=#E2B755>\"{epilogueQuote}\"</color></i>";
+        epiTmp.fontSize = 42;
+        epiTmp.alignment = TextAlignmentOptions.Center;
+        epiTmp.color = Color.white;
+        epiTmp.lineSpacing = 20;
+        RectTransform epiTextRect = epiTextObj.GetComponent<RectTransform>();
+        epiTextRect.anchorMin = new Vector2(0.1f, 0.2f);
+        epiTextRect.anchorMax = new Vector2(0.9f, 0.8f);
+        epiTextRect.sizeDelta = Vector2.zero;
+
+        // 3. Credits Panel
+        GameObject creditsPanelObj = new GameObject("CreditsPanel");
+        creditsPanelObj.transform.SetParent(canvasObj.transform, false);
+        RectTransform credPanelRect = creditsPanelObj.AddComponent<RectTransform>();
+        credPanelRect.anchorMin = Vector2.zero;
+        credPanelRect.anchorMax = Vector2.one;
+        credPanelRect.sizeDelta = Vector2.zero;
+
+        GameObject containerObj = new GameObject("CreditsContainer");
+        containerObj.transform.SetParent(creditsPanelObj.transform, false);
+        RectTransform contRect = containerObj.AddComponent<RectTransform>();
+        contRect.anchorMin = new Vector2(0.5f, 0.5f);
+        contRect.anchorMax = new Vector2(0.5f, 0.5f);
+        contRect.pivot = new Vector2(0.5f, 0.5f);
+        contRect.sizeDelta = new Vector2(1200, 2400);
+
+        TextMeshProUGUI credTmp = containerObj.AddComponent<TextMeshProUGUI>();
+        credTmp.alignment = TextAlignmentOptions.Center;
+        credTmp.fontSize = 28;
+        credTmp.color = new Color(0.9f, 0.95f, 1f, 0.95f);
+        credTmp.lineSpacing = 16;
+        credTmp.richText = true;
+
+        string creditContent = 
+            "<size=64><b><color=#5DE6FF>ATLANTIS: DEEP SLUMBER</color></b></size>\n\n" +
+            "<size=32><b><color=#E2B755>ĐỒ ÁN TỐT NGHIỆP</color></b></size>\n" +
+            "<size=22><color=#AAAAAA>FPT POLYTECHNIC / FPT UNIVERSITY</color></size>\n\n" +
+            "───────────────────────────\n\n" +
+            "<size=36><b><color=#FFD166>NHÓM PHÁT TRIỂN</color></b></size>\n" +
+            "<size=42><b><color=#FFFFFF>HIGH FIVE TIDES</color></b></size>\n\n\n" +
+            "<size=32><b><color=#E2B755>GIẢNG VIÊN HƯỚNG DẪN</color></b></size>\n" +
+            "<size=36><b>Cô Hồ Thị Hồng Nga</b></size>\n\n\n" +
+            "<size=32><b><color=#E2B755>LẬP TRÌNH HỆ THỐNG & GAMEPLAY</color></b></size>\n" +
+            "<size=34>Vũ Phạm Luân\nNguyễn Mạnh Hoài Bảo\nHồ Hữu Hoàng\nHuỳnh Nhật Đông</size>\n\n\n" +
+            "<size=32><b><color=#E2B755>CUTSCENE & CINEMATICS</color></b></size>\n" +
+            "<size=34>Hồ Hữu Hoàng\nNguyễn Nhật Tân\nVũ Phạm Luân</size>\n\n\n" +
+            "<size=32><b><color=#E2B755>CỐT TRUYỆN & KỊCH BẢN</color></b></size>\n" +
+            "<size=34>High Five Tides</size>\n\n\n" +
+            "<size=32><b><color=#E2B755>TÀI NGUYÊN 3D, HIỆU ỨNG & MÔI TRƯỜNG</color></b></size>\n" +
+            "<size=30>Unity Asset Store & Online Creators Community\n(Bản quyền thương mại & Sưu tầm)</size>\n\n\n" +
+            "<size=32><b><color=#E2B755>ÂM THANH & NHẠC NỀN</color></b></size>\n" +
+            "<size=30>Freesound Community & Royalty-Free Audio Artists</size>\n\n\n" +
+            "───────────────────────────\n\n" +
+            "<size=32><b><color=#E2B755>LỜI CẢM ƠN ĐẶC BIỆT</color></b></size>\n" +
+            "<size=28>Xin chân thành gửi lời cảm ơn sâu sắc nhất tới:\n" +
+            "Cô Hồ Thị Hồng Nga đã tận tình hướng dẫn và đồng hành.\n" +
+            "Quý Thầy Cô bộ môn đã chỉ dạy và hỗ trợ nhóm trong suốt quá trình học tập.\n" +
+            "Gia đình & Bạn bè đã luôn cổ vũ, động viên.\n\n" +
+            "Và đặc biệt là <b>BẠN</b> — Người đã đồng hành cùng Atlantis đến những giây phút cuối cùng!</size>\n\n\n\n" +
+            "<size=54><b><color=#5DE6FF>THANK YOU FOR PLAYING!</color></b></size>\n\n";
+
+        credTmp.text = creditContent;
+
+        // 4. Skip Button ở góc trên bên phải
+        GameObject skipBtnObj = new GameObject("SkipButton");
+        skipBtnObj.transform.SetParent(canvasObj.transform, false);
+        RectTransform skipRect = skipBtnObj.AddComponent<RectTransform>();
+        skipRect.anchorMin = new Vector2(1, 1);
+        skipRect.anchorMax = new Vector2(1, 1);
+        skipRect.pivot = new Vector2(1, 1);
+        skipRect.anchoredPosition = new Vector2(-40, -40);
+        skipRect.sizeDelta = new Vector2(220, 55);
+
+        Image skipImg = skipBtnObj.AddComponent<Image>();
+        skipImg.color = new Color(0.12f, 0.16f, 0.22f, 0.85f);
+
+        Button skipBtnComp = skipBtnObj.AddComponent<Button>();
+        ColorBlock colors = skipBtnComp.colors;
+        colors.normalColor = new Color(0.12f, 0.16f, 0.22f, 0.85f);
+        colors.highlightedColor = new Color(0.2f, 0.45f, 0.65f, 0.95f);
+        colors.pressedColor = new Color(0.1f, 0.3f, 0.5f, 1f);
+        skipBtnComp.colors = colors;
+
+        GameObject skipTextObj = new GameObject("Text");
+        skipTextObj.transform.SetParent(skipBtnObj.transform, false);
+        TextMeshProUGUI skipTmp = skipTextObj.AddComponent<TextMeshProUGUI>();
+        skipTmp.text = "<b>BỎ QUA [ESC]  ⏩</b>";
+        skipTmp.fontSize = 20;
+        skipTmp.alignment = TextAlignmentOptions.Center;
+        skipTmp.color = new Color(0.9f, 0.95f, 1f, 1f);
+        RectTransform skipTextRect = skipTextObj.GetComponent<RectTransform>();
+        skipTextRect.anchorMin = Vector2.zero;
+        skipTextRect.anchorMax = Vector2.one;
+        skipTextRect.sizeDelta = Vector2.zero;
+
+        // Ẩn lúc đầu
+        creditsPanelObj.SetActive(false);
+        epiObj.SetActive(false);
+
+        return canvasObj;
     }
 
     private void HideObjectsAfterVideo()
@@ -341,7 +730,7 @@ public class VideoCutsceneController : NetworkBehaviour
         }
     }
 
-    private System.Collections.IEnumerator ForceTeleportRoutine(GameObject playerObj, Vector3 targetPos, Quaternion targetRot)
+    private IEnumerator ForceTeleportRoutine(GameObject playerObj, Vector3 targetPos, Quaternion targetRot)
     {
         var charCtrl = playerObj.GetComponent<CharacterController>();
         var navAgent = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
@@ -420,7 +809,6 @@ public class VideoCutsceneController : NetworkBehaviour
             var netObj = other.GetComponentInParent<NetworkObject>();
             if (netObj != null && netObj.IsPlayerObject)
             {
-                // Thêm người chơi vào danh sách. (HashSet sẽ tự động bỏ qua nếu đã có sẵn)
                 playersInZone.Add(netObj.OwnerClientId); 
                 CheckCutsceneCondition();
             }
@@ -429,8 +817,7 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        // KHÔNG LÀM GÌ CẢ Ở ĐÂY NỮA
-        // Việc bỏ trống hàm này giúp hệ thống "nhớ" những ai đã từng chạm vào Trigger
+        // Giữ nguyên để nhớ danh sách đã chạm
     }
 
     private void CheckCutsceneCondition()
@@ -438,7 +825,6 @@ public class VideoCutsceneController : NetworkBehaviour
         int totalPlayersInRoom = NetworkManager.Singleton.ConnectedClientsList.Count;
         int requiredPlayers = Mathf.Max(1, totalPlayersInRoom - 1);
 
-        // Vẫn giữ nguyên logic xóa những người đã Disconnect ra khỏi danh sách
         playersInZone.RemoveWhere(id => !NetworkManager.Singleton.ConnectedClients.ContainsKey(id));
 
         Debug.Log($"[VideoCutscene] Số người đã check-in: {playersInZone.Count} / Cần thiết: {requiredPlayers} (Tổng user: {totalPlayersInRoom})");
@@ -450,14 +836,10 @@ public class VideoCutsceneController : NetworkBehaviour
         }
     }
 
-    // =========================================================================
-    // [ĐÃ THÊM] HIỆU ỨNG MỜ DẦN (FADE IN / FADE OUT) CHO MÀN HÌNH ĐEN
-    // =========================================================================
-    private System.Collections.IEnumerator FadeCanvasGroup(GameObject targetObj, float startAlpha, float endAlpha, float duration, bool disableAfter)
+    private IEnumerator FadeCanvasGroup(GameObject targetObj, float startAlpha, float endAlpha, float duration, bool disableAfter)
     {
         if (targetObj == null) yield break;
 
-        // Tự động tìm hoặc gắn CanvasGroup vào UI để có thể chỉnh độ trong suốt
         CanvasGroup canvasGroup = targetObj.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
         {
