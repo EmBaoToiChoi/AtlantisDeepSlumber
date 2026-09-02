@@ -260,8 +260,10 @@ public static class AuthService
                 await Task.Yield();
 
             string responseText = req.downloadHandler.text;
+            Debug.Log($"[AUTH SERVICE] SendRoomRequest ({url}) [{req.responseCode}]: {responseText}");
+
             if (req.result == UnityWebRequest.Result.ConnectionError)
-                return new RoomResponse { success = false, message = "Network Error!" };
+                return new RoomResponse { success = false, message = "Network Error: " + req.error };
 
             try
             {

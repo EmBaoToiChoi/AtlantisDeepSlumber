@@ -848,6 +848,13 @@ public class AtlantisMenuController : MonoBehaviour
     }
 
 
+    private NetworkBootstrap GetNetworkBootstrap()
+    {
+        if (_netBootstrap == null) _netBootstrap = FindFirstObjectByType<NetworkBootstrap>();
+        if (_netBootstrap == null) _netBootstrap = NetworkBootstrap.Instance;
+        return _netBootstrap;
+    }
+
     private async Task ResetProcessingFlagDelayed(int ms = 1500)
     {
         await Task.Delay(ms);
@@ -870,21 +877,27 @@ public class AtlantisMenuController : MonoBehaviour
         try
         {
             var response = await AuthService.JoinRoom(inputID, "");
+            Debug.Log($"[JOIN] Phản hồi JoinByID ({inputID}): success={response?.success}, msg={response?.message}");
             if (response != null && response.success)
             {
                 // Lưu lại thông tin phòng thật
                 PlayerPrefs.SetString("CurrentRoomID", inputID);
-                PlayerPrefs.SetString("CurrentRoomName", response.room.roomName);
+                PlayerPrefs.SetString("CurrentRoomName", response.room?.roomName ?? $"Phòng #{inputID}");
                 PlayerPrefs.SetInt("IsRoomHost", 0);
                 PlayerPrefs.Save();
 
-                if (_netBootstrap != null)
+                var bootstrap = GetNetworkBootstrap();
+                if (bootstrap != null)
                 {
                     if (SceneLoader.Instance != null)
                     {
                         SceneLoader.Instance.ShowLoading("CONNECTING TO SESSION...");
                     }
-                    _netBootstrap.StartClientAsPlayer();
+                    bootstrap.StartClientAsPlayer();
+                }
+                else
+                {
+                    Debug.LogError("[JOIN] Không tìm thấy NetworkBootstrap trong cảnh!");
                 }
             }
             else
@@ -899,6 +912,10 @@ public class AtlantisMenuController : MonoBehaviour
                 }
                 Debug.LogError($"[JOIN] Lỗi tham gia: {response?.message}");
             }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[JOIN] Ngoại lệ JoinByID: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
@@ -987,6 +1004,7 @@ public class AtlantisMenuController : MonoBehaviour
         try
         {
             var response = await AuthService.JoinRoom(roomId, "");
+            Debug.Log($"[JOIN] Phản hồi JoinSpecificRoom ({roomId}): success={response?.success}, msg={response?.message}");
             if (response != null && response.success)
             {
                 PlayerPrefs.SetString("CurrentRoomID", roomId);
@@ -994,19 +1012,28 @@ public class AtlantisMenuController : MonoBehaviour
                 PlayerPrefs.SetInt("IsRoomHost", 0);
                 PlayerPrefs.Save();
 
-                if (_netBootstrap != null)
+                var bootstrap = GetNetworkBootstrap();
+                if (bootstrap != null)
                 {
                     if (SceneLoader.Instance != null)
                     {
                         SceneLoader.Instance.ShowLoading("JOINING EXPEDITION...");
                     }
-                    _netBootstrap.StartClientAsPlayer();
+                    bootstrap.StartClientAsPlayer();
+                }
+                else
+                {
+                    Debug.LogError("[JOIN] Không tìm thấy NetworkBootstrap trong cảnh!");
                 }
             }
             else
             {
-                Debug.LogError($"[JOIN] Lỗi: {response?.message}");
+                Debug.LogError($"[JOIN] Lỗi tham gia phòng: {response?.message}");
             }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[JOIN] Ngoại lệ JoinSpecificRoom: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
@@ -1041,6 +1068,7 @@ public class AtlantisMenuController : MonoBehaviour
         try
         {
             var response = await AuthService.JoinRoom(roomId, pwd);
+            Debug.Log($"[JOIN] Phản hồi ConfirmJoinPrivateRoom ({roomId}): success={response?.success}, msg={response?.message}");
             if (response != null && response.success)
             {
                 PlayerPrefs.SetString("CurrentRoomID", roomId);
@@ -1048,13 +1076,18 @@ public class AtlantisMenuController : MonoBehaviour
                 PlayerPrefs.SetInt("IsRoomHost", 0);
                 PlayerPrefs.Save();
 
-                if (_netBootstrap != null)
+                var bootstrap = GetNetworkBootstrap();
+                if (bootstrap != null)
                 {
                     if (SceneLoader.Instance != null)
                     {
                         SceneLoader.Instance.ShowLoading("ACCESS GRANTED...");
                     }
-                    _netBootstrap.StartClientAsPlayer();
+                    bootstrap.StartClientAsPlayer();
+                }
+                else
+                {
+                    Debug.LogError("[JOIN] Không tìm thấy NetworkBootstrap trong cảnh!");
                 }
             }
             else
@@ -1067,6 +1100,10 @@ public class AtlantisMenuController : MonoBehaviour
                     btnConfirm.text = LocalizationManager.Get("btn_connect");
                 }
             }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[JOIN] Ngoại lệ ConfirmJoinPrivateRoom: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
