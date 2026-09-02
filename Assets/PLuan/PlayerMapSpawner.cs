@@ -101,6 +101,13 @@ public class PlayerMapSpawner : NetworkBehaviour
     {
         if (IsServer)
         {
+            serverRoomContinuePos = Vector3.zero;
+            serverRoomContinueRotY = 0f;
+            serverRoomHasContinuePos = false;
+            serverRoomIsContinueMode = false;
+            serverRoomWorldSaveJson = "";
+            clientSpawnIndices.Clear();
+
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
             {
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadEventCompleted;
@@ -152,18 +159,19 @@ public class PlayerMapSpawner : NetworkBehaviour
 
         int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
 
+        bool isContinue = SaveManager.IsContinueMode;
         Vector3 customPos = SaveManager.PendingSpawnPosition;
         float customRotY = SaveManager.PendingSpawnRotationY;
-        bool hasCustomPos = SaveManager.HasPendingSpawnPosition && (customPos != Vector3.zero);
+        bool hasCustomPos = isContinue && SaveManager.HasPendingSpawnPosition && (customPos != Vector3.zero);
 
         string worldSaveJson = "";
-        if (SaveManager.HasWorldSave())
+        if (isContinue && SaveManager.HasWorldSave())
         {
             worldSaveJson = JsonUtility.ToJson(SaveManager.LoadWorldSave());
         }
 
-        Debug.Log($"[PlayerMapSpawner] [CLIENT] Gửi ServerRpc yêu cầu sinh Player cho Client {NetworkManager.Singleton.LocalClientId} (Nhân vật ID: {selectedChar}, HasCustomPos: {hasCustomPos}, Pos: {customPos}, ContinueMode: {SaveManager.IsContinueMode})");
-        RequestSpawnPlayerServerRpc(selectedChar, customPos, customRotY, hasCustomPos, worldSaveJson);
+        Debug.Log($"[PlayerMapSpawner] [CLIENT] Gửi ServerRpc yêu cầu sinh Player cho Client {NetworkManager.Singleton.LocalClientId} (Nhân vật ID: {selectedChar}, HasCustomPos: {hasCustomPos}, Pos: {customPos}, ContinueMode: {isContinue})");
+        RequestSpawnPlayerServerRpc(selectedChar, customPos, customRotY, hasCustomPos, isContinue, worldSaveJson);
     }
 
     public override void OnNetworkDespawn()
@@ -221,14 +229,14 @@ public class PlayerMapSpawner : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestSpawnPlayerServerRpc(int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false, string worldSaveJson = "", ServerRpcParams rpcParams = default)
+    private void RequestSpawnPlayerServerRpc(int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false, bool isContinueMode = false, string worldSaveJson = "", ServerRpcParams rpcParams = default)
     {
         if (!IsServer) return;
 
         ulong clientId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId} (HasCustomPos: {hasCustomPos}, Pos: {customPos})");
+        Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId} (HasCustomPos: {hasCustomPos}, Pos: {customPos}, IsContinueMode: {isContinueMode})");
 
-        if (hasCustomPos && customPos != Vector3.zero && customPos.sqrMagnitude > 10f)
+        if (isContinueMode && hasCustomPos && customPos != Vector3.zero && customPos.sqrMagnitude > 10f)
         {
             serverRoomContinuePos = customPos;
             serverRoomContinueRotY = customRotY;
@@ -253,8 +261,19 @@ public class PlayerMapSpawner : NetworkBehaviour
                 }
             });
         }
+        else
+        {
+            // Phòng đang ở chế độ Chơi Mới
+            SyncRoomContinueModeClientRpc(false, Vector3.zero, 0f, "", new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { clientId }
+                }
+            });
+        }
 
-        SpawnPlayerForClient(clientId, characterId, customPos, customRotY, hasCustomPos);
+        SpawnPlayerForClient(clientId, characterId, customPos, customRotY, hasCustomPos && isContinueMode);
     }
 
     [ClientRpc]

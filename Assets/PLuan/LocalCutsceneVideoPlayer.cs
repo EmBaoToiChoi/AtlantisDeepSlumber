@@ -727,9 +727,10 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         // Khôi phục hiển thị HUD
         SetHUDVisible(true);
 
-        if (ZombieQuestTargetManager.Instance != null)
+        var zombieQuest = ZombieQuestTargetManager.Instance ?? FindFirstObjectByType<ZombieQuestTargetManager>();
+        if (zombieQuest != null)
         {
-            ZombieQuestTargetManager.Instance.StartQuest();
+            zombieQuest.StartQuest();
         }
 
         // Ẩn object sau khi kết thúc cutscene (nếu có)

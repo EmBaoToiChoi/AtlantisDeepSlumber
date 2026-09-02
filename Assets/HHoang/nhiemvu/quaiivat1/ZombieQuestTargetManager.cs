@@ -96,7 +96,7 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     public override void OnNetworkSpawn()
     {
-        if (isQuestCompleted.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest")))
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest"))
         {
             isQuestCompletedLocal = true;
             isQuestActiveLocal = false;
@@ -158,12 +158,24 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             }
             return;
         }
+        else
+        {
+            if (IsServer)
+            {
+                isQuestCompleted.Value = false;
+                isQuestActive.Value = false;
+                currentKills.Value = 0;
+            }
+            isQuestCompletedLocal = false;
+            isQuestActiveLocal = false;
+            localKills = 0;
+        }
 
         currentKills.OnValueChanged += OnKillsChanged;
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompleted.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompleted.Value)
+        if (isQuestCompleted.Value && (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest")))
         {
             isQuestCompletedLocal = true;
             SaveManager.MarkQuestCompleted("ZombieQuest");
