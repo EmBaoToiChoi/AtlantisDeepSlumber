@@ -37,10 +37,22 @@ public class EndingCreditsUI : MonoBehaviour
     private Coroutine _runningSequenceCoroutine;
     private bool _isExiting = false;
 
+    public static bool IsEndingActive { get; private set; } = false;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
         InitializeUI();
+    }
+
+    private void OnDisable()
+    {
+        IsEndingActive = false;
+    }
+
+    private void OnDestroy()
+    {
+        IsEndingActive = false;
     }
 
 #if UNITY_EDITOR
@@ -80,7 +92,7 @@ public class EndingCreditsUI : MonoBehaviour
         if (_uiDocument == null) _uiDocument = GetComponent<UIDocument>();
         if (_uiDocument == null) return;
 
-        _uiDocument.sortingOrder = 9998;
+        _uiDocument.sortingOrder = 100000;
 
 #if UNITY_EDITOR
         ResolveAssets();
@@ -146,6 +158,7 @@ public class EndingCreditsUI : MonoBehaviour
 
     private IEnumerator EndingSequenceRoutine(Action onComplete)
     {
+        IsEndingActive = true;
         InitializeUI();
         _isExiting = false;
 
@@ -161,14 +174,21 @@ public class EndingCreditsUI : MonoBehaviour
             _root.style.opacity = 1;
         }
 
-        // Bật nhạc nếu có
+        // Bật nhạc kết thúc: Ưu tiên nhạc custom nếu có, nếu không tự động bật BGM của MainMenu
         if (endingMusic != null)
         {
             if (_audioSource == null) _audioSource = gameObject.AddComponent<AudioSource>();
             _audioSource.clip = endingMusic;
             _audioSource.loop = true;
-            _audioSource.volume = 0.8f;
+            _audioSource.volume = 0.85f;
             _audioSource.Play();
+        }
+        else if (AudioManager.Instance != null)
+        {
+            Debug.Log("[EndingCreditsUI] Tự động bật BGM của MainMenu cho đoạn Ending Credits...");
+            AudioManager.Instance.SetCutsceneActive(false, 0.5f);
+            AudioManager.Instance.SetBossMusicActive(false, 0.5f);
+            AudioManager.Instance.PlayBGM("Audio/BGM", 1.5f);
         }
 
         // ==========================================
@@ -300,6 +320,7 @@ public class EndingCreditsUI : MonoBehaviour
         UnityEngine.Cursor.lockState = CursorLockMode.None;
         UnityEngine.Cursor.visible = true;
         PlayerHUDController.isAnyUIOpen = false;
+        IsEndingActive = false;
 
         if (SceneLoader.Instance != null)
         {
