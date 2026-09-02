@@ -2337,6 +2337,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -87934,6 +87943,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -210400,6 +210418,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -213654,6 +213681,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -241399,6 +241435,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -245806,6 +245851,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -279823,6 +279877,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -325996,6 +326059,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -353960,6 +354032,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 1
+  epilogueQuote: "Li\u1EC7u h\u1ECD \u0111\xE3 th\u1EF1c s\u1EF1 phong \u1EA5n \u0111\u01B0\u1EE3c
+    b\xF3ng t\u1ED1i, hay ch\xEDnh h\u1ECD \u0111\xE3 tr\u1EDF th\xE0nh m\u1ED9t
+    ph\u1EA7n c\u1EE7a n\xF3?"
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -354157,6 +354238,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -418123,6 +418213,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -448104,6 +448203,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -456714,6 +456822,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
@@ -479866,6 +479983,15 @@ MonoBehaviour:
   - ElenaPlayer
   - ArthurPlayer
   disableTeleport: 0
+  isFinalEndingCutscene: 0
+  epilogueQuote: "V\u1EF1c s\xE2u nu\u1ED1t ch\u1EEDng \xE1nh s\xE1ng...\nNh\u01B0ng
+    gi\u1EA5c ng\u1EE7 ng\xE0n n\u0103m c\u1EE7a Atlantis m\u1EDBi ch\u1EC9 v\u1EEBa
+    b\u1EAFt \u0111\u1EA7u."
+  epilogueDuration: 5
+  creditScrollSpeed: 65
+  creditLoopCount: 2
+  endingMusic: {fileID: 0}
+  customEndingCanvas: {fileID: 0}
   playOnlyOnce: 1
   hasPlayed: 0
   isPlaying: 0
