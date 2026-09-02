@@ -59,6 +59,7 @@ public class AtlantisMenuController : MonoBehaviour
     private List<ParticleData> _particles = new List<ParticleData>();
     private string _currentTargetRoomName;
     private ScrollView _roomScrollView;
+    private bool _isProcessingRoom = false;
 
     private async void Start()
     {
@@ -847,45 +848,63 @@ public class AtlantisMenuController : MonoBehaviour
     }
 
 
-    private async void JoinByID()
+    private async Task ResetProcessingFlagDelayed(int ms = 1500)
     {
-        string inputID = _root.Q<TextField>("input-room-id").value.Trim().ToUpper();
-        if (inputID.Length != 6) return;
-
-        Debug.Log($"[JOIN] Kết nối tới ID: #{inputID}");
-        var response = await AuthService.JoinRoom(inputID, "");
-        if (response != null && response.success)
-        {
-            // Lưu lại thông tin phòng thật
-            PlayerPrefs.SetString("CurrentRoomID", inputID);
-            PlayerPrefs.SetString("CurrentRoomName", response.room.roomName);
-            PlayerPrefs.SetInt("IsRoomHost", 0);
-            PlayerPrefs.Save();
-
-            if (_netBootstrap != null)
-            {
-                if (SceneLoader.Instance != null)
-                {
-                    SceneLoader.Instance.ShowLoading("CONNECTING TO SESSION...");
-                }
-                _netBootstrap.StartClientAsPlayer();
-            }
-        }
-        else
-        {
-            if (response != null && !string.IsNullOrEmpty(response.message) && 
-                (response.message.IndexOf("mật khẩu", System.StringComparison.OrdinalIgnoreCase) >= 0 || 
-                 response.message.IndexOf("password", System.StringComparison.OrdinalIgnoreCase) >= 0))
-            {
-                JoinSpecificRoom(inputID, $"Phòng #{inputID}", true);
-                return;
-            }
-            Debug.LogError($"[JOIN] Lỗi tham gia: {response?.message}");
-        }
+        await Task.Delay(ms);
+        _isProcessingRoom = false;
     }
 
+    private async void JoinByID()
+    {
+        if (_isProcessingRoom) return;
+        _isProcessingRoom = true;
 
+        string inputID = _root.Q<TextField>("input-room-id").value.Trim().ToUpper();
+        if (inputID.Length != 6)
+        {
+            _isProcessingRoom = false;
+            return;
+        }
 
+        Debug.Log($"[JOIN] Kết nối tới ID: #{inputID}");
+        try
+        {
+            var response = await AuthService.JoinRoom(inputID, "");
+            if (response != null && response.success)
+            {
+                // Lưu lại thông tin phòng thật
+                PlayerPrefs.SetString("CurrentRoomID", inputID);
+                PlayerPrefs.SetString("CurrentRoomName", response.room.roomName);
+                PlayerPrefs.SetInt("IsRoomHost", 0);
+                PlayerPrefs.Save();
+
+                if (_netBootstrap != null)
+                {
+                    if (SceneLoader.Instance != null)
+                    {
+                        SceneLoader.Instance.ShowLoading("CONNECTING TO SESSION...");
+                    }
+                    _netBootstrap.StartClientAsPlayer();
+                }
+            }
+            else
+            {
+                if (response != null && !string.IsNullOrEmpty(response.message) && 
+                    (response.message.IndexOf("mật khẩu", System.StringComparison.OrdinalIgnoreCase) >= 0 || 
+                     response.message.IndexOf("password", System.StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    _isProcessingRoom = false;
+                    JoinSpecificRoom(inputID, $"Phòng #{inputID}", true);
+                    return;
+                }
+                Debug.LogError($"[JOIN] Lỗi tham gia: {response?.message}");
+            }
+        }
+        finally
+        {
+            _ = ResetProcessingFlagDelayed(1500);
+        }
+    }
 
     private void CreateRoomItem(RoomData room)
     {
@@ -928,10 +947,6 @@ public class AtlantisMenuController : MonoBehaviour
         _roomScrollView.Add(item);
     }
 
-
-
-    private bool _isProcessingRoom = false; // Flag chống spam
-
     private async void JoinSpecificRoom(string roomId, string roomName, bool isPrivate)
     {
         if (_isProcessingRoom) return; // Nếu đang xử lý thì bỏ qua
@@ -969,27 +984,33 @@ public class AtlantisMenuController : MonoBehaviour
             return;
         }
 
-        var response = await AuthService.JoinRoom(roomId, "");
-        if (response != null && response.success)
+        try
         {
-            PlayerPrefs.SetString("CurrentRoomID", roomId);
-            PlayerPrefs.SetString("CurrentRoomName", roomName);
-            PlayerPrefs.SetInt("IsRoomHost", 0);
-            PlayerPrefs.Save();
-
-            if (_netBootstrap != null)
+            var response = await AuthService.JoinRoom(roomId, "");
+            if (response != null && response.success)
             {
-                if (SceneLoader.Instance != null)
+                PlayerPrefs.SetString("CurrentRoomID", roomId);
+                PlayerPrefs.SetString("CurrentRoomName", roomName);
+                PlayerPrefs.SetInt("IsRoomHost", 0);
+                PlayerPrefs.Save();
+
+                if (_netBootstrap != null)
                 {
-                    SceneLoader.Instance.ShowLoading("JOINING EXPEDITION...");
+                    if (SceneLoader.Instance != null)
+                    {
+                        SceneLoader.Instance.ShowLoading("JOINING EXPEDITION...");
+                    }
+                    _netBootstrap.StartClientAsPlayer();
                 }
-                _netBootstrap.StartClientAsPlayer();
+            }
+            else
+            {
+                Debug.LogError($"[JOIN] Lỗi: {response?.message}");
             }
         }
-        else
+        finally
         {
-            Debug.LogError($"[JOIN] Lỗi: {response?.message}");
-            _isProcessingRoom = false; // Thất bại thì mở lại để chọn phòng khác
+            _ = ResetProcessingFlagDelayed(1500);
         }
     }
 
@@ -1017,33 +1038,39 @@ public class AtlantisMenuController : MonoBehaviour
             btnConfirm.text = "ĐANG KẾT NỐI...";
         }
 
-        var response = await AuthService.JoinRoom(roomId, pwd);
-        if (response != null && response.success)
+        try
         {
-            PlayerPrefs.SetString("CurrentRoomID", roomId);
-            PlayerPrefs.SetString("CurrentRoomName", _currentTargetRoomName);
-            PlayerPrefs.SetInt("IsRoomHost", 0);
-            PlayerPrefs.Save();
-
-            if (_netBootstrap != null)
+            var response = await AuthService.JoinRoom(roomId, pwd);
+            if (response != null && response.success)
             {
-                if (SceneLoader.Instance != null)
+                PlayerPrefs.SetString("CurrentRoomID", roomId);
+                PlayerPrefs.SetString("CurrentRoomName", _currentTargetRoomName);
+                PlayerPrefs.SetInt("IsRoomHost", 0);
+                PlayerPrefs.Save();
+
+                if (_netBootstrap != null)
                 {
-                    SceneLoader.Instance.ShowLoading("ACCESS GRANTED...");
+                    if (SceneLoader.Instance != null)
+                    {
+                        SceneLoader.Instance.ShowLoading("ACCESS GRANTED...");
+                    }
+                    _netBootstrap.StartClientAsPlayer();
                 }
-                _netBootstrap.StartClientAsPlayer();
+            }
+            else
+            {
+                Debug.LogError($"[JOIN] Sai mật khẩu: {response?.message}");
+                if (lblErr != null) ShowError(lblErr, response?.message ?? "Mật khẩu không đúng.");
+                if (btnConfirm != null)
+                {
+                    btnConfirm.SetEnabled(true);
+                    btnConfirm.text = LocalizationManager.Get("btn_connect");
+                }
             }
         }
-        else
+        finally
         {
-            Debug.LogError($"[JOIN] Sai mật khẩu: {response?.message}");
-            if (lblErr != null) ShowError(lblErr, response?.message ?? "Mật khẩu không đúng.");
-            if (btnConfirm != null)
-            {
-                btnConfirm.SetEnabled(true);
-                btnConfirm.text = LocalizationManager.Get("btn_connect");
-            }
-            _isProcessingRoom = false;
+            _ = ResetProcessingFlagDelayed(1500);
         }
     }
 

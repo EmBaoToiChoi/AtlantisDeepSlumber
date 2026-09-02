@@ -192,6 +192,8 @@ public class NetworkBootstrap : MonoBehaviour
         // XỬ LÝ CHUYỂN CẢNH KHI CÓ PHÒNG MỚI HOẶC REJOIN
         if (NetworkManager.Singleton.IsServer)
         {
+            ActivePlayerNames.Add(playerName);
+
             // Nếu đây là phòng mới (roomId khác với phòng đang chạy hoặc chưa có phòng nào)
             if (string.IsNullOrEmpty(CurrentActiveRoomId) || CurrentActiveRoomId == "000000" || roomId != CurrentActiveRoomId)
             {
@@ -200,19 +202,13 @@ public class NetworkBootstrap : MonoBehaviour
                 ServerRoomId = roomId;
                 ServerRoomName = roomName;
                 IsGameStarted = false;
-                ActivePlayerNames.Clear();
 
                 // Đưa VPS quay về cảnh Lobby
                 StartLoadWaitingHall();
             }
             else
             {
-                // Nếu trùng roomId (cùng phòng)
-                if (IsGameStarted)
-                {
-                    Debug.Log($"[SERVER] Player '{playerName}' kết nối/rejoin vào phòng đang chạy game. Cho phép vào scene.");
-                    ActivePlayerNames.Add(playerName);
-                }
+                Debug.Log($"[SERVER] Player '{playerName}' tham gia/rejoin phòng '{CurrentActiveRoomId}' thành công.");
             }
         }
     }
@@ -291,6 +287,12 @@ public class NetworkBootstrap : MonoBehaviour
             transport.ConnectTimeoutMS = 15000;     // 15 giây kết nối ban đầu
         }
 
+        // Đăng ký callback theo dõi kết nối
+        NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnectedHandler;
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnectedHandler;
+        NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnectedHandler;
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnectedHandler;
+
         // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm (tăng từ 120 lên 300)
         NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 300;
 
@@ -304,6 +306,27 @@ public class NetworkBootstrap : MonoBehaviour
         }
     }
 
+    private void OnClientConnectedHandler(ulong clientId)
+    {
+        if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
+        {
+            Debug.Log("<color=green>[NETWORK] KẾT NỐI VPS THÀNH CÔNG!</color>");
+        }
+    }
+
+    private void OnClientDisconnectedHandler(ulong clientId)
+    {
+        if (NetworkManager.Singleton != null && (clientId == NetworkManager.Singleton.LocalClientId || clientId == NetworkManager.ServerClientId))
+        {
+            string reason = NetworkManager.Singleton.DisconnectReason;
+            Debug.LogError($"<color=red>[NETWORK] Mất kết nối hoặc bị ngắt khỏi Server! Lý do: {(string.IsNullOrEmpty(reason) ? "Connection Timeout" : reason)}</color>");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.HideLoading();
+            }
+        }
+    }
+
     public void StartServerAsHost()
     {
         // TRƯỜNG HỢP DÙNG VPS: Cả người tạo phòng cũng là Client
@@ -314,7 +337,6 @@ public class NetworkBootstrap : MonoBehaviour
     private void OnSceneEventReceived(SceneEvent sceneEvent)
     {
         if (!NetworkManager.Singleton.IsClient) return;
-        if (sceneEvent.ClientId != NetworkManager.Singleton.LocalClientId) return;
 
         switch (sceneEvent.SceneEventType)
         {
