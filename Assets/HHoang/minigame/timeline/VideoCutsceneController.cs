@@ -53,7 +53,9 @@ public class VideoCutsceneController : NetworkBehaviour
     [Tooltip("Âm thanh / Nhạc nền phát trong lúc chạy Credit (tùy chọn)")]
     public AudioClip endingMusic;
 
-    [Header("Security")]
+    [Header("Security & Trigger")]
+    [Tooltip("Nếu bật (True), Cutscene sẽ tự động phát khi người chơi bước vào BoxCollider Trigger. Nếu tắt (False), chỉ phát khi được gọi từ code (ví dụ: Boss chết / nhiệm vụ xong).")]
+    public bool enableTriggerZone = true;
     public bool playOnlyOnce = true;
     public bool hasPlayed = false;
     public bool HasPlayed => hasPlayed;
@@ -550,6 +552,8 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (!enableTriggerZone) return;
+
         if (playOnlyOnce && (hasPlayed || (SaveManager.IsContinueMode && SaveManager.IsCutscenePlayed(GetCutsceneId()))))
         {
             DisableTriggerCollider();

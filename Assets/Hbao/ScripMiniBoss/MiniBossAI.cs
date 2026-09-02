@@ -23,8 +23,17 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 {
     //cus
     [Header("Death Event Trigger")]
-    [Tooltip("Kéo object chứa VideoCutsceneController vào đây và chọn hàm StartCutscene")]
+    [Tooltip("Kéo script VideoCutsceneController phát khi MiniBoss chết vào đây (khuyên dùng)")]
+    public VideoCutsceneController deathCutscene;
+    [Tooltip("Kéo object chứa VideoCutsceneController vào đây và chọn hàm StartCutscene (nếu dùng Event)")]
     public UnityEvent onBossDeathEvent;
+
+    [Header("Cutscene Dormant Settings")]
+    [Tooltip("Bật tùy chọn này để MiniBoss hoàn toàn ẨN & ĐỨNG YÊN (tắt hình ảnh, tắt va chạm, không gây sát thương, không nhận sát thương, không đi tuần) cho tới khi Cutscene kết thúc.")]
+    public bool startHiddenUntilCutscene = true;
+    private bool isDormantHidden = false;
+    private Vector3 initialSpawnPosition;
+    private Quaternion initialSpawnRotation;
 
     public enum MiniBossState { Idle, Chase, Attack, SwordRain, Hit, Enrage, Dead }
 
@@ -427,6 +436,14 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         hitState = new HitState(this);
         enrageState = new EnrageState(this);
         deadState = new DeadState(this);
+
+        initialSpawnPosition = transform.position;
+        initialSpawnRotation = transform.rotation;
+        if (startHiddenUntilCutscene && !isClone)
+        {
+            isDormantHidden = true;
+            SetBossDormantHiddenVisuals(true);
+        }
     }
 
     private void Start()
@@ -540,6 +557,11 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         else
         {
             if (agent != null) agent.enabled = false;
+        }
+
+        if (isDormantHidden && !isClone)
+        {
+            SetBossDormantHiddenVisuals(true);
         }
 
         if (isClone)
@@ -675,20 +697,46 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         audio.Play();
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void ActivateBossServerRpc()
+    {
+        ActivateBoss();
+    }
+
     public void ActivateBoss()
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer) || isClone || !IsSpawned;
-        if (!auth) return;
-
-        if (isStandaloneMode || !IsSpawned)
+        bool isServerNet = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && NetworkManager.Singleton.IsServer;
+        bool auth = isStandaloneMode || isServerNet || (IsNetworkActive && IsServer) || isClone || !IsSpawned;
+        if (!auth)
         {
-            localIsBossActive = true;
-            localHealth = maxHealth > 0 ? maxHealth : phase1MaxHealth * 0.45f;
+            if (IsSpawned && !IsServer)
+            {
+                ActivateBossServerRpc();
+            }
+            return;
+        }
+
+        if (isDormantHidden)
+        {
+            SetBossDormantHiddenVisuals(false);
+            if (!isStandaloneMode && IsNetworkActive && IsServer)
+            {
+                WakeupBossDormantClientRpc();
+            }
+        }
+
+        localIsBossActive = true;
+        if (localHealth <= 0f)
+        {
+            localHealth = maxHealth > 0 ? maxHealth : phase1MaxHealth;
         }
         
-        if (!isStandaloneMode && IsServer && IsSpawned)
+        if (isServerNet || (IsServer && IsSpawned))
         {
-            isBossActive.Value = true;
+            if (IsSpawned)
+            {
+                isBossActive.Value = true;
+            }
         }
 
         // Kích hoạt phát âm thanh lúc chiến đấu bình thường (lặp lại & đồng bộ cho 4 Player)
@@ -715,6 +763,57 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         }
 
         Debug.Log($"[MiniBossAI] {(isClone ? "Phân Thân Mini Boss" : "Mini Boss")} đã KÍCH HOẠT! Nhắm mục tiêu: {(targetPlayer != null ? targetPlayer.name : "None")} - State: {CurrentStateValue}");
+    }
+
+    public void SetBossDormantHiddenVisuals(bool hidden)
+    {
+        isDormantHidden = hidden;
+
+        // 1. Tắt/Bật toàn bộ Renderers (Model, Vũ khí, SkinnedMesh)
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            if (r != null) r.enabled = !hidden;
+        }
+
+        // 2. Tắt/Bật toàn bộ Colliders (không cản đường, không nhận dame, không gây dame)
+        var colliders = GetComponentsInChildren<Collider>(true);
+        foreach (var c in colliders)
+        {
+            if (c != null) c.enabled = !hidden;
+        }
+
+        // 3. Tắt/Bật NavMeshAgent (tránh tự động đi tuần hoặc trôi vị trí)
+        if (agent != null)
+        {
+            if (hidden)
+            {
+                if (agent.isActiveAndEnabled) agent.isStopped = true;
+                agent.enabled = false;
+            }
+            else
+            {
+                agent.enabled = true;
+                if (agent.isOnNavMesh) agent.isStopped = false;
+            }
+        }
+
+        // 4. Khóa vị trí nếu đang ẩn hoặc vừa hiện
+        if (!hidden)
+        {
+            if (initialSpawnPosition != Vector3.zero)
+            {
+                transform.position = initialSpawnPosition;
+                transform.rotation = initialSpawnRotation;
+                SnapToNavMesh();
+            }
+        }
+    }
+
+    [ClientRpc]
+    private void WakeupBossDormantClientRpc()
+    {
+        SetBossDormantHiddenVisuals(false);
     }
 
     public void EnsureCloneOverheadHealthBar()
@@ -1798,6 +1897,13 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
     private void Update()
     {
+        if (isDormantHidden)
+        {
+            transform.position = initialSpawnPosition;
+            transform.rotation = initialSpawnRotation;
+            return;
+        }
+
         // Khóa 100% di chuyển và tấn công của MiniBoss trong suốt thời gian triệu hồi phân thân
         if (isSummonInvulnerable)
         {
@@ -1839,7 +1945,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             }
         }
 
-        bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
+        bool aiAuth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && NetworkManager.Singleton.IsServer) || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
 
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
@@ -2372,11 +2478,23 @@ private void Die()
             }
         }
 
-        // 3. Kích hoạt onBossDeathEvent của Boss chính
+        // 3. Kích hoạt deathCutscene hoặc onBossDeathEvent của Boss chính
         var mainBoss = FindMainBoss() ?? this;
         bool hasInvoked = false;
 
-        if (mainBoss != null && mainBoss.onBossDeathEvent != null && mainBoss.onBossDeathEvent.GetPersistentEventCount() > 0)
+        if (mainBoss != null && mainBoss.deathCutscene != null && (!mainBoss.deathCutscene.playOnlyOnce || !mainBoss.deathCutscene.hasPlayed))
+        {
+            mainBoss.deathCutscene.StartCutscene();
+            hasInvoked = true;
+            Debug.Log("[MiniBossAI] Đã kích hoạt mainBoss.deathCutscene thành công!");
+        }
+        else if (deathCutscene != null && (!deathCutscene.playOnlyOnce || !deathCutscene.hasPlayed))
+        {
+            deathCutscene.StartCutscene();
+            hasInvoked = true;
+            Debug.Log("[MiniBossAI] Đã kích hoạt deathCutscene thành công!");
+        }
+        else if (mainBoss != null && mainBoss.onBossDeathEvent != null && mainBoss.onBossDeathEvent.GetPersistentEventCount() > 0)
         {
             try 
             { 
@@ -2397,7 +2515,7 @@ private void Die()
             catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking local onBossDeathEvent: {ex}"); }
         }
 
-        // 4. Tìm VideoCutsceneController liên kết trong Scene (cuscene 11 / miniboss / boss) để kích hoạt StartCutscene()
+        // 4. Tìm VideoCutsceneController liên kết trong Scene (cuscene 11 / miniboss / rakan) để kích hoạt StartCutscene()
         if (!hasInvoked)
         {
             var allCutscenes = FindObjectsByType<VideoCutsceneController>(FindObjectsSortMode.None);
@@ -2406,9 +2524,9 @@ private void Die()
                 if (cs != null && !cs.isPlaying && (!cs.playOnlyOnce || !cs.hasPlayed))
                 {
                     string n = cs.gameObject.name.ToLower();
-                    if (n.Contains("11") || n.Contains("miniboss") || n.Contains("boss") || n.Contains("cutscene3") || n.Contains("cutscene4"))
+                    if (n.Contains("11") || n.Contains("miniboss") || n.Contains("rakan") || n.Contains("cutscene_miniboss"))
                     {
-                        Debug.Log($"[MiniBossAI] Tự động kích hoạt VideoCutsceneController: '{cs.gameObject.name}'");
+                        Debug.Log($"[MiniBossAI] Tự động kích hoạt VideoCutsceneController của MiniBoss: '{cs.gameObject.name}'");
                         cs.StartCutscene();
                         break;
                     }

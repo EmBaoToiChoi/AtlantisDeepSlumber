@@ -73,6 +73,17 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
     public float earthBlastScale = 5.0f; // Scale đá to hơn (mặc định FinalBoss là 3.0f)
     [Tooltip("Bật/Tắt hiệu ứng rung camera kiểu động đất khi đá trồi lên")]
     public bool enableEarthquakeCameraShake = true;
+
+    [Header("Death Cutscene")]
+    [Tooltip("Kéo VideoCutsceneController chạy khi Boss Silas chết vào đây (tùy chọn)")]
+    public VideoCutsceneController deathCutscene;
+
+    [Header("Cutscene Dormant Settings")]
+    [Tooltip("Bật tùy chọn này để Boss Silas hoàn toàn ẨN & ĐỨNG YÊN (tắt hình ảnh, tắt va chạm, không gây sát thương, không nhận sát thương, không đi tuần) cho tới khi Cutscene kết thúc.")]
+    public bool startHiddenUntilCutscene = true;
+    private bool isDormantHidden = false;
+    private Vector3 initialSpawnPosition;
+    private Quaternion initialSpawnRotation;
     [Tooltip("Thời gian rung camera khi đá nhô lên (giây)")]
     public float earthquakeShakeDuration = 0.85f;
     [Tooltip("Cường độ rung camera dữ dội (0.4f - 0.8f)")]
@@ -246,7 +257,8 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
     public void ActivateBoss()
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        bool isServerNet = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && NetworkManager.Singleton.IsServer;
+        bool auth = isStandaloneMode || isServerNet || (IsNetworkActive && IsServer) || !IsSpawned;
         if (!auth)
         {
             if (IsSpawned && !IsServer)
@@ -256,12 +268,105 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
             return;
         }
 
-        if (isStandaloneMode)
-            localIsBossActive = true;
-        else
-            isBossActive.Value = true;
+        if (isDormantHidden)
+        {
+            SetBossDormantHiddenVisuals(false);
+            if (!isStandaloneMode && IsNetworkActive && IsServer)
+            {
+                WakeupBossDormantClientRpc();
+            }
+        }
 
-        Debug.Log("[BossAI] Boss kích hoạt trận chiến!");
+        localIsBossActive = true;
+        if (localHealth <= 0f)
+        {
+            localHealth = maxHealth > 0 ? maxHealth : 1000f;
+        }
+
+        if (isServerNet || (IsServer && IsSpawned))
+        {
+            if (IsSpawned)
+                isBossActive.Value = true;
+        }
+
+        // BẢO ĐẢM: Lập tức quét tìm Player gần nhất và chuyển sang trạng thái Chase rượt đuổi ngay lập tức!
+        DetectAndSwitchTarget();
+        if (targetPlayer == null) targetPlayer = FindNearestPlayer();
+        if (targetPlayer != null)
+        {
+            ChangeState(BossState.Chase);
+        }
+
+        Debug.Log("[BossAI] Boss Silas kích hoạt trận chiến!");
+    }
+
+    private Transform FindNearestPlayer()
+    {
+        Transform nearest = null;
+        float minDist = float.MaxValue;
+        var list = GetAllActivePlayers();
+        foreach (var p in list)
+        {
+            if (p == null || IsPlayerDeadOrInvisible(p)) continue;
+            float d = Vector3.Distance(transform.position, p.position);
+            if (d < minDist)
+            {
+                minDist = d;
+                nearest = p;
+            }
+        }
+        return nearest;
+    }
+
+    public void SetBossDormantHiddenVisuals(bool hidden)
+    {
+        isDormantHidden = hidden;
+
+        // 1. Tắt/Bật toàn bộ Renderers (Model, Vũ khí, SkinnedMesh)
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            if (r != null) r.enabled = !hidden;
+        }
+
+        // 2. Tắt/Bật toàn bộ Colliders (không cản đường, không nhận dame, không gây dame)
+        var colliders = GetComponentsInChildren<Collider>(true);
+        foreach (var c in colliders)
+        {
+            if (c != null) c.enabled = !hidden;
+        }
+
+        // 3. Tắt/Bật NavMeshAgent (tránh tự động đi tuần hoặc trôi vị trí)
+        if (agent != null)
+        {
+            if (hidden)
+            {
+                if (agent.isActiveAndEnabled) agent.isStopped = true;
+                agent.enabled = false;
+            }
+            else
+            {
+                agent.enabled = true;
+                if (agent.isOnNavMesh) agent.isStopped = false;
+            }
+        }
+
+        // 4. Khóa vị trí nếu đang ẩn hoặc vừa hiện
+        if (!hidden)
+        {
+            if (initialSpawnPosition != Vector3.zero)
+            {
+                transform.position = initialSpawnPosition;
+                transform.rotation = initialSpawnRotation;
+                SnapToNavMesh();
+            }
+        }
+    }
+
+    [ClientRpc]
+    private void WakeupBossDormantClientRpc()
+    {
+        SetBossDormantHiddenVisuals(false);
     }
 
     // ─── Thành phần chính (Components) ─────────────────────────
@@ -393,6 +498,14 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         hitState = new HitState(this);
         enrageState = new EnrageState(this);
         deadState = new DeadState(this);
+
+        initialSpawnPosition = transform.position;
+        initialSpawnRotation = transform.rotation;
+        if (startHiddenUntilCutscene)
+        {
+            isDormantHidden = true;
+            SetBossDormantHiddenVisuals(true);
+        }
     }
 
     private void Start()
@@ -470,6 +583,11 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         {
             if (agent != null) agent.enabled = false;
         }
+
+        if (isDormantHidden)
+        {
+            SetBossDormantHiddenVisuals(true);
+        }
     }
 
     public override void OnNetworkDespawn()
@@ -498,7 +616,14 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
     private void Update()
     {
-        bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (isDormantHidden)
+        {
+            transform.position = initialSpawnPosition;
+            transform.rotation = initialSpawnRotation;
+            return;
+        }
+
+        bool aiAuth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && NetworkManager.Singleton.IsServer) || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
 
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
@@ -1451,6 +1576,13 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         // Vô hiệu hóa va chạm để không cản đường
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
+
+        // Kích hoạt video cutscene sau khi Silas chết (nếu có cấu hình)
+        if (deathCutscene != null && (!deathCutscene.playOnlyOnce || !deathCutscene.hasPlayed))
+        {
+            deathCutscene.StartCutscene();
+            Debug.Log("[BossAI] Silas đã chết! Kích hoạt deathCutscene thành công.");
+        }
 
         Invoke(nameof(DespawnBoss), 3.0f);
     }

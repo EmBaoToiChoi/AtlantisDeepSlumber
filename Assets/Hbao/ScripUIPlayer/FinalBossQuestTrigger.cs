@@ -184,7 +184,12 @@ public class FinalBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private bool IsFinalBossDead()
     {
+        if (finalBoss == null)
+        {
+            finalBoss = FindFirstObjectByType<FinalBossAI>(FindObjectsInactive.Include);
+        }
         if (finalBoss == null) return false;
+        if (!finalBoss.gameObject.activeInHierarchy && !finalBoss.IsDead) return false;
         return finalBoss.IsDead || finalBoss.ActualCurrentHealth <= 0;
     }
 

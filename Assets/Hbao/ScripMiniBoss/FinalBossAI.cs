@@ -560,11 +560,17 @@ public class FinalBossAI : NetworkBehaviour
         // BẢO VỆ CHẶT CHẼ: CHỪNG NÀO BossAI (Silas) CÒN SỐNG TRONG SCENE THÌ Final Boss TUYỆT ĐỐI KHÔNG CHIẾN ĐẤU!
         if (!startActiveWithoutMiniboss)
         {
-            if (bossMiniboss == null) bossMiniboss = FindFirstObjectByType<BossAI>();
-            if (bossMiniboss != null && !bossMiniboss.IsDead && bossMiniboss.ActualCurrentHealth > 0)
+            if (bossMiniboss == null) bossMiniboss = FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
+            if (bossMiniboss != null)
             {
-                Debug.Log("[FinalBossAI] BossAI (Silas) vẫn còn sống -> Final Boss TUYỆT ĐỐI KHÔNG combat, tiếp tục ngồi trên ngai!");
-                return;
+                bool silasDied = bossMiniboss.IsDead || (bossMiniboss.IsPhase2 && bossMiniboss.ActualCurrentHealth <= 0);
+                bool silasFought = bossMiniboss.IsBossActive || bossMiniboss.IsDead;
+
+                if (!silasDied || !silasFought)
+                {
+                    Debug.Log("[FinalBossAI] BossAI (Silas) chưa tham chiến hoặc chưa chết -> Final Boss TUYỆT ĐỐI KHÔNG combat, tiếp tục ngồi trên ngai!");
+                    return;
+                }
             }
         }
 
@@ -1347,19 +1353,22 @@ public class FinalBossAI : NetworkBehaviour
             // Tự động tìm BossAI (Silas) nếu chưa được gán
             if (boss.bossMiniboss == null)
             {
-                boss.bossMiniboss = Object.FindFirstObjectByType<BossAI>();
+                boss.bossMiniboss = Object.FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
             }
 
-            // CHỪNG NÀO BOSSAI (SILAS) CHƯA CHẾT -> TUYỆT ĐỐI KHÔNG COMBAT, TIẾP TỤC NGỒI TRÊN NGAI!
+            // CHỪNG NÀO BOSSAI (SILAS) CHƯA THAM CHIẾN VÀ CHƯA CHẾT -> TUYỆT ĐỐI KHÔNG COMBAT, TIẾP TỤC NGỒI TRÊN NGAI!
             if (boss.bossMiniboss != null)
             {
-                if (!boss.bossMiniboss.IsDead && boss.bossMiniboss.ActualCurrentHealth > 0)
+                bool silasDied = boss.bossMiniboss.IsDead || (boss.bossMiniboss.IsPhase2 && boss.bossMiniboss.ActualCurrentHealth <= 0);
+                bool silasFought = boss.bossMiniboss.IsBossActive || boss.bossMiniboss.IsDead;
+
+                if (!silasDied || !silasFought)
                 {
-                    return; // BossAI vẫn đang sống -> Tiếp tục ngồi, không combat!
+                    return; // BossAI vẫn đang sống hoặc chưa vào trận -> Tiếp tục ngồi, không combat, không chạy cutscene!
                 }
                 else
                 {
-                    // BossAI đã chết hoàn toàn!
+                    // BossAI đã chết hoàn toàn sau trận đấu!
                     if (boss.transitionCutscene != null)
                     {
                         // Nếu có video thì chạy video trước
@@ -1381,10 +1390,13 @@ public class FinalBossAI : NetworkBehaviour
             // Nếu không có BossAI trong scene, kiểm tra MiniBoss
             if (boss.miniBoss != null)
             {
-                if (boss.miniBoss.IsDead || boss.miniBoss.allMiniBossEntitiesDeadNet.Value)
+                bool isMiniBossActuallyDead = boss.miniBoss.IsDead || boss.miniBoss.allMiniBossEntitiesDeadNet.Value;
+                bool isMiniBossFought = boss.miniBoss.IsBossActive || isMiniBossActuallyDead;
+                if (!isMiniBossActuallyDead || !isMiniBossFought)
                 {
-                    boss.ActivateBoss();
+                    return;
                 }
+                boss.ActivateBoss();
             }
         }
 
