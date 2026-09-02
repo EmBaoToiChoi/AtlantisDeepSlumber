@@ -407,23 +407,32 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void ActivateObjectsAfterVideo()
     {
-        if (objectToActivateAfterVideo != null)
-        {
-            objectToActivateAfterVideo.SetActive(true);
-            Debug.Log($"[VideoCutsceneController] Đã kích hoạt (active) object sau video: {objectToActivateAfterVideo.name}");
-        }
+        ActivateSingleObject(objectToActivateAfterVideo);
 
         if (objectsToActivateAfterVideo != null)
         {
             foreach (var obj in objectsToActivateAfterVideo)
             {
-                if (obj != null)
-                {
-                    obj.SetActive(true);
-                    Debug.Log($"[VideoCutsceneController] Đã kích hoạt (active) object sau video: {obj.name}");
-                }
+                ActivateSingleObject(obj);
             }
         }
+    }
+
+    private void ActivateSingleObject(GameObject obj)
+    {
+        if (obj == null) return;
+        obj.SetActive(true);
+        Debug.Log($"[VideoCutsceneController] Đã kích hoạt (active) object sau video: {obj.name}");
+
+        // Nếu đối tượng được kích hoạt là Boss, tự động đánh thức AI của Boss ngay lập tức
+        var bossAI = obj.GetComponent<BossAI>() ?? obj.GetComponentInChildren<BossAI>();
+        if (bossAI != null) bossAI.ActivateBoss();
+
+        var miniBossAI = obj.GetComponent<MiniBossAI>() ?? obj.GetComponentInChildren<MiniBossAI>();
+        if (miniBossAI != null) miniBossAI.ActivateBoss();
+
+        var finalBossAI = obj.GetComponent<FinalBossAI>() ?? obj.GetComponentInChildren<FinalBossAI>();
+        if (finalBossAI != null) finalBossAI.ActivateBoss();
     }
 
     // =========================================================================

@@ -93,7 +93,7 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (silasBoss == null)
         {
-            silasBoss = FindFirstObjectByType<BossAI>();
+            silasBoss = FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
             if (silasBoss != null)
             {
                 Debug.Log($"[SilasBossQuestTrigger] Tự động tìm thấy BossAI (Silas) trên '{silasBoss.gameObject.name}'.");
@@ -184,7 +184,15 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private bool IsSilasDead()
     {
+        if (silasBoss == null)
+        {
+            silasBoss = FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
+        }
         if (silasBoss == null) return false;
+
+        // Nếu Silas đang tắt (inactive) và chưa từng bị đánh chết -> KHÔNG coi là chết!
+        if (!silasBoss.gameObject.activeInHierarchy && !silasBoss.IsDead) return false;
+
         return silasBoss.IsDead || (silasBoss.IsPhase2 && silasBoss.ActualCurrentHealth <= 0);
     }
 
@@ -203,32 +211,40 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (!isNetwork || IsServer)
         {
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
-            if (active && silasBoss != null)
+            if (active)
             {
-                int currentDefeated = IsSilasDead() ? 1 : 0;
-
-                if (isNetwork)
+                if (silasBoss == null)
                 {
-                    if (bossDefeatedCount.Value != currentDefeated)
-                    {
-                        bossDefeatedCount.Value = currentDefeated;
-                        Debug.Log($"[SilasBossQuestTrigger Server] Tiến độ tiêu diệt Silas: {currentDefeated}/1");
-                    }
-                }
-                else
-                {
-                    if (localBossDefeatedCount != currentDefeated)
-                    {
-                        localBossDefeatedCount = currentDefeated;
-                        UpdateQuestProgressUI();
-                        Debug.Log($"[SilasBossQuestTrigger Offline] Tiến độ tiêu diệt Silas: {currentDefeated}/1");
-                    }
+                    silasBoss = FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
                 }
 
-                if (currentDefeated >= 1)
+                if (silasBoss != null && (silasBoss.IsBossActive || silasBoss.IsDead))
                 {
-                    CompleteQuest();
-                    return;
+                    int currentDefeated = IsSilasDead() ? 1 : 0;
+
+                    if (isNetwork)
+                    {
+                        if (bossDefeatedCount.Value != currentDefeated)
+                        {
+                            bossDefeatedCount.Value = currentDefeated;
+                            Debug.Log($"[SilasBossQuestTrigger Server] Tiến độ tiêu diệt Silas: {currentDefeated}/1");
+                        }
+                    }
+                    else
+                    {
+                        if (localBossDefeatedCount != currentDefeated)
+                        {
+                            localBossDefeatedCount = currentDefeated;
+                            UpdateQuestProgressUI();
+                            Debug.Log($"[SilasBossQuestTrigger Offline] Tiến độ tiêu diệt Silas: {currentDefeated}/1");
+                        }
+                    }
+
+                    if (currentDefeated >= 1)
+                    {
+                        CompleteQuest();
+                        return;
+                    }
                 }
             }
         }

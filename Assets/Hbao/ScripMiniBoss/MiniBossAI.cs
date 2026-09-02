@@ -195,6 +195,9 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
         if (mainBoss != null && mainBoss.IsSpawned && !mainBoss.isStandaloneMode)
         {
+            // Nếu Main Boss chưa từng được kích hoạt và chưa chết -> KHÔNG coi là chết!
+            if (!mainBoss.IsBossActive && !mainBoss.mainBossDeadNet.Value && !mainBoss.IsDead) return false;
+
             bool mainDead = mainBoss.mainBossDeadNet.Value || mainBoss.IsDead || mainBoss.ActualCurrentHealth <= 0;
             bool c1Dead = !mainBoss.hasSummonedClones || mainBoss.clone1DeadNet.Value;
             bool c2Dead = !mainBoss.hasSummonedClones || mainBoss.clone2DeadNet.Value;
@@ -202,17 +205,23 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         }
 
         // Fallback Standalone
-        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allBosses == null || allBosses.Length == 0) return false;
+
+        bool anyFound = false;
+        bool anyAlive = false;
         foreach (var b in allBosses)
         {
-            if (b != null && b.gameObject.activeInHierarchy)
+            if (b != null)
             {
+                anyFound = true;
                 if (!b.IsDead && b.ActualCurrentHealth > 0f)
                 {
-                    return false;
+                    anyAlive = true;
                 }
             }
         }
+        if (!anyFound || anyAlive) return false;
         return true;
     }
 
@@ -746,10 +755,10 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
     public MiniBossAI FindMainBoss()
     {
-        var all = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        var all = FindObjectsByType<MiniBossAI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var b in all)
         {
-            if (b != null && !b.isClone && b.gameObject.activeInHierarchy)
+            if (b != null && !b.isClone)
             {
                 return b;
             }
