@@ -3,8 +3,9 @@
     <ui:VisualElement name="main-container" class="main-container">
         <ui:Label name="enemy-name" text="Enemy Name" class="enemy-name" />
         <ui:VisualElement name="health-bar-container" class="container">
-            <ui:VisualElement name="background" class="background">
-                <ui:VisualElement name="progress-bar" class="progress-bar" />
+            <ui:VisualElement name="background" class="background" />
+            <ui:VisualElement name="progress-bar" class="progress-bar">
+                <ui:VisualElement name="progress-fill" class="progress-fill" />
             </ui:VisualElement>
             <ui:VisualElement class="health-bar-frame-overlay" />
         </ui:VisualElement>

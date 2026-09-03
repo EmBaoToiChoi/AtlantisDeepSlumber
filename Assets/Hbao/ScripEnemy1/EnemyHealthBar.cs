@@ -15,6 +15,8 @@ public class EnemyHealthBar : MonoBehaviour
     public UIDocument uiDocument;
 
     private VisualElement progressBar; 
+    private VisualElement progressFill;
+    private VisualElement healthBarContainer;
     private VisualElement yellowBar;
     private Label nameLabel;
     private Camera mainCamera;
@@ -79,7 +81,9 @@ public class EnemyHealthBar : MonoBehaviour
         if (uiDocument != null && uiDocument.rootVisualElement != null)
         {
             var root = uiDocument.rootVisualElement;
+            healthBarContainer = root.Q<VisualElement>("health-bar-container");
             progressBar = root.Q<VisualElement>("progress-bar"); 
+            progressFill = root.Q<VisualElement>("progress-fill");
             nameLabel = root.Q<Label>("enemy-name");
         }
     }
@@ -167,7 +171,13 @@ public class EnemyHealthBar : MonoBehaviour
             displayedHealth = maxHp; // Tránh hiển thị rỗng lúc vừa spawn
         }
 
-        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressFill != null && healthBarContainer != null && healthBarContainer.resolvedStyle.width > 0f)
+        {
+            progressFill.style.width = healthBarContainer.resolvedStyle.width;
+        }
+
+        float hpRatio = Mathf.Clamp01(displayedHealth / maxHp);
+        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(11.3f, 90f, hpRatio);
         if (progressBar != null) progressBar.style.width = Length.Percent(percent);
     }
 
@@ -234,7 +244,13 @@ public class EnemyHealthBar : MonoBehaviour
             displayedHealth = actualHp;
         }
 
-        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressFill != null && healthBarContainer != null && healthBarContainer.resolvedStyle.width > 0f)
+        {
+            progressFill.style.width = healthBarContainer.resolvedStyle.width;
+        }
+
+        float hpRatio = Mathf.Clamp01(displayedHealth / maxHp);
+        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(11.3f, 90f, hpRatio);
         if (progressBar != null)
         {
             progressBar.style.width = Length.Percent(percent);
