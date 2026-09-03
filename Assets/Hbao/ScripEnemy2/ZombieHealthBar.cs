@@ -8,6 +8,8 @@ public class ZombieHealthBar : MonoBehaviour
     public UIDocument uiDocument;
 
     private VisualElement progressBar; 
+    private VisualElement progressFill;
+    private VisualElement healthBarContainer;
     private VisualElement yellowBar;
     private Label nameLabel;
     private Camera mainCamera;
@@ -73,7 +75,9 @@ public class ZombieHealthBar : MonoBehaviour
         if (uiDocument != null && uiDocument.rootVisualElement != null)
         {
             var root = uiDocument.rootVisualElement;
+            healthBarContainer = root.Q<VisualElement>("health-bar-container");
             progressBar = root.Q<VisualElement>("progress-bar"); 
+            progressFill = root.Q<VisualElement>("progress-fill");
             nameLabel = root.Q<Label>("enemy-name");
             
             if (nameLabel != null && enemy != null)
@@ -97,7 +101,13 @@ public class ZombieHealthBar : MonoBehaviour
             displayedHealth = maxHp;
         }
 
-        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressFill != null && healthBarContainer != null && healthBarContainer.resolvedStyle.width > 0f)
+        {
+            progressFill.style.width = healthBarContainer.resolvedStyle.width;
+        }
+
+        float hpRatio = Mathf.Clamp01(displayedHealth / maxHp);
+        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(11.3f, 90f, hpRatio);
         if (progressBar != null) progressBar.style.width = Length.Percent(percent);
     }
 
@@ -111,12 +121,14 @@ public class ZombieHealthBar : MonoBehaviour
     {
         EnsureEnemyReference();
 
-        if (progressBar == null || nameLabel == null)
+        if (progressBar == null || nameLabel == null || progressFill == null || healthBarContainer == null)
         {
             if (uiDocument != null && uiDocument.rootVisualElement != null)
             {
                 var root = uiDocument.rootVisualElement;
+                healthBarContainer = root.Q<VisualElement>("health-bar-container");
                 progressBar = root.Q<VisualElement>("progress-bar");
+                progressFill = root.Q<VisualElement>("progress-fill");
                 nameLabel = root.Q<Label>("enemy-name");
                 if (nameLabel != null && enemy != null)
                 {
@@ -144,7 +156,13 @@ public class ZombieHealthBar : MonoBehaviour
             displayedHealth = actualHp;
         }
 
-        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressFill != null && healthBarContainer != null && healthBarContainer.resolvedStyle.width > 0f)
+        {
+            progressFill.style.width = healthBarContainer.resolvedStyle.width;
+        }
+
+        float hpRatio = Mathf.Clamp01(displayedHealth / maxHp);
+        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(11.3f, 90f, hpRatio);
         if (progressBar != null)
         {
             progressBar.style.width = Length.Percent(percent);
