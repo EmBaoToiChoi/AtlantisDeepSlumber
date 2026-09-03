@@ -318,7 +318,7 @@ MonoBehaviour:
   skillQClip: {fileID: 0}
   skillEClip: {fileID: 0}
   skillRClip: {fileID: 0}
-  moveSpeed: 5
+  moveSpeed: 7
   runSpeedMultiplier: 1.5
   damageAmount: 20
   attackRange: 3

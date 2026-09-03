@@ -5,7 +5,7 @@ public class MayaHealProjectile : NetworkBehaviour
 {
     public float speed = 30f;
     public float lifetime = 4f;
-    public float healPercentage = 0.25f; // 25% of Maya's max health
+    public float healPercentage = 0.375f; // 37.5% of Maya's max health (+50%)
     public float mayaMaxHealth = 100f;   // Maya's max health, passed at spawn
     public float duration = 5f;          // HoT duration
 

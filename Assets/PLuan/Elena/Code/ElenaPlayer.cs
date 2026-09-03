@@ -106,7 +106,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [Header("Movement & Attack Settings")]
-    public float moveSpeed = 5f;
+    public float moveSpeed = 7f;
     public float runSpeedMultiplier = 2.0f;
     public float damageAmount = 20f;
     public float attackRange = 3f;
@@ -1623,7 +1623,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         maxHealth = 100f + hpLv * 10f;
         damageAmount = 20f + dmgLv * 5f;
         rSkillIceDamage = 40f + dmgLv * 5f;
-        moveSpeed = 5.0f + spdLv * 0.5f;
+        moveSpeed = 7.0f + spdLv * 0.5f;
 
         if (isStandaloneMode)
         {
@@ -3795,7 +3795,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         maxHealth = 100f + hp * 10f;
         damageAmount = 20f + dmg * 5f;
         rSkillIceDamage = 40f + dmg * 5f;
-        moveSpeed = 5.0f + spd * 0.5f;
+        moveSpeed = 7.0f + spd * 0.5f;
 
         currentHealth.Value = health;
         currentMana.Value = 100f + mp * 10f;

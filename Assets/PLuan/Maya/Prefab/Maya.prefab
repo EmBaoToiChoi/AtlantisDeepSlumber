@@ -296,7 +296,7 @@ MonoBehaviour:
   skillQClip: {fileID: 0}
   skillEClip: {fileID: 0}
   skillRClip: {fileID: 0}
-  moveSpeed: 5
+  moveSpeed: 7
   runSpeedMultiplier: 2
   damageAmount: 20
   attackRange: 3
@@ -488,7 +488,7 @@ MonoBehaviour:
   eSkillCooldown: 10
   eSkillHealRadius: 5
   eSkillHealDuration: 5
-  eSkillHealAmount: 10
+  eSkillHealAmount: 15
   eSkillVfxScaleMultiplier: 2
   eSkillTargetingVfxPrefab: {fileID: 4748681987041982144, guid: b94815a5db14e594790c77978da0b138, type: 3}
   eSkillVfxPrefab: {fileID: 660570046470276339, guid: f7f7b221b134bdf4097445f9151296db, type: 3}
