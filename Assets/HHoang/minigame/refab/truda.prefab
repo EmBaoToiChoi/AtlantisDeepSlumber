@@ -4996,7 +4996,7 @@ MonoBehaviour:
     m_Bits: 1
   checkGroundDistance: 1
   cylinderRadius: 1
-  maxLifetime: 35
+  maxLifetime: 25
   maxRollDistance: 120
   rollDustEffect: {fileID: 6650199810314842004, guid: 3b7f2c753d435d647a80f1f047a113e3, type: 3}
   contactDamage: 5
