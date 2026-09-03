@@ -14,7 +14,7 @@
         <ui:VisualElement name="boss-hp-wrapper" class="boss-hp-wrapper">
             <ui:VisualElement name="boss-header" class="boss-header">
                 <ui:Label name="boss-title" text="TEMPLE GUARDIAN" class="boss-title" />
-                <ui:Label name="boss-name" text="SILAS" class="boss-name" />
+                <ui:Label name="boss-name" text="RAKAN" class="boss-name" />
             </ui:VisualElement>
             <ui:VisualElement name="boss-health-bar-container" class="boss-health-bar-container">
                 <ui:VisualElement name="boss-hp-background" class="boss-hp-background">

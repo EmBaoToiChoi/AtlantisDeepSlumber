@@ -18,6 +18,9 @@ public class BossHealthBar : MonoBehaviour
     [Tooltip("Danh hiệu/phụ đề hiển thị phía trên bên trái thanh máu Boss (ví dụ: TEMPLE GUARDIAN)")]
     public string bossTitle = "TEMPLE GUARDIAN";
 
+    [Tooltip("Tên hiển thị của Boss trên thanh máu (ví dụ: Rakan)")]
+    public string bossDisplayName = "Rakan";
+
     private VisualElement rootContainer;
     private VisualElement progressBar;
     private VisualElement yellowBar;
@@ -107,7 +110,7 @@ public class BossHealthBar : MonoBehaviour
         }
 
         // Đặt tên hiển thị cho Boss
-        string bossName = boss.gameObject.name;
+        string bossName = !string.IsNullOrEmpty(bossDisplayName) ? bossDisplayName : boss.gameObject.name;
         if (bossName.Contains("(Clone)"))
         {
             bossName = bossName.Replace("(Clone)", "").Trim();
