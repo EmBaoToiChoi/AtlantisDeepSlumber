@@ -1,9 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/ScripEnemy1/BossHealthBar.uss?fileID=7433441132597879392&amp;guid=e920347e5a24c204b816724d0630ec1f&amp;type=3#BossHealthBar" />
     <ui:VisualElement name="boss-hud-container" class="boss-hud-container" style="display: none;">
-        <!-- Nền tối màu Obsidian sâu thẳm -->
-        <ui:VisualElement class="boss-hud-bg" />
-
         <!-- Khung ngoài Frame_Box_Medium_02 bọc trọn toàn bộ HUD -->
         <ui:VisualElement class="boss-hud-outer-frame" />
         
@@ -23,7 +20,7 @@
                 <ui:VisualElement name="boss-hp-background" class="boss-hp-background">
                     <ui:VisualElement name="boss-hp-yellow-bar" class="boss-hp-yellow-bar" />
                     <ui:VisualElement name="boss-hp-progress-bar" class="boss-hp-progress-bar" />
-                    <ui:Label name="boss-hp-text" text="700 / 700" class="boss-hp-text" />
+                    <ui:Label name="boss-hp-text" text="400 / 400" class="boss-hp-text" />
                 </ui:VisualElement>
                 <ui:VisualElement class="boss-hp-frame-overlay" />
             </ui:VisualElement>
