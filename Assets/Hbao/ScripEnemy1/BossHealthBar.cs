@@ -14,6 +14,10 @@ public class BossHealthBar : MonoBehaviour
     [Tooltip("Kéo thả UIDocument chứa file BossHealthBar.uxml vào đây")]
     public UIDocument uiDocument;
 
+    [Header("Settings")]
+    [Tooltip("Danh hiệu/phụ đề hiển thị phía trên bên trái thanh máu Boss (ví dụ: TEMPLE GUARDIAN)")]
+    public string bossTitle = "TEMPLE GUARDIAN";
+
     private VisualElement rootContainer;
     private VisualElement progressBar;
     private VisualElement yellowBar;
@@ -112,6 +116,11 @@ public class BossHealthBar : MonoBehaviour
         if (nameLabel != null)
         {
             nameLabel.text = bossName;
+        }
+
+        if (titleLabel != null && !string.IsNullOrEmpty(bossTitle))
+        {
+            titleLabel.text = bossTitle;
         }
 
         float curHp = boss.ActualCurrentHealth;
