@@ -233252,7 +233252,7 @@ MonoBehaviour:
   autoAnimatePreview: 1
   previewPillarRadius: 1
   previewPillarLength: 6
-  previewTrajectoryLength: 80
+  previewTrajectoryLength: 49.4
   previewReverseRotation: 0
   isSpawningActive:
     UpdateTraits:
@@ -233307,7 +233307,7 @@ Transform:
   m_GameObject: {fileID: 957689697}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 151.57, y: 83.93, z: 535.01}
+  m_LocalPosition: {x: 180.78, y: 83.93, z: 535.01}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -356799,6 +356799,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 114688159551363921, guid: 3df8a8fe6362c5e46801d75bbb5ddda9, type: 3}
   m_PrefabInstance: {fileID: 1564901969}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1565648072
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1565648073}
+  m_Layer: 0
+  m_Name: GameObject (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1565648073
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1565648072}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 280.86, y: 83.45, z: 536.44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1565869617
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -413606,7 +413637,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a8dd4b9b13a347b99f677c41a8cc3c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetDestination: {fileID: 792958371}
+  targetDestination: {fileID: 1565648073}
   spawnOffset: {x: 0, y: 0.2, z: 0}
   matchTargetRotation: 1
   onlyPlayer: 1
@@ -504540,3 +504571,4 @@ SceneRoots:
   - {fileID: 1763894708}
   - {fileID: 1114744753}
   - {fileID: 1721352070}
+  - {fileID: 1565648073}
