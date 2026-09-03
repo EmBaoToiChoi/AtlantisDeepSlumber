@@ -66,17 +66,31 @@ public class CrystalPuzzleSystem : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void PlaceCrystalServerRpc(ulong playerNetworkId)
+    private void PlaceCrystalServerRpc(ulong playerNetworkId, ServerRpcParams rpcParams = default)
     {
         if (hasCrystal.Value) return; 
+
+        // Lấy clientId của người gửi request để gửi lệnh xóa ngọc về đúng client đó
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        RemoveCrystalFromOwnerClientRpc(playerNetworkId, senderClientId);
+
+        hasCrystal.Value = true;
+    }
+
+    /// <summary>
+    /// Gửi lệnh xóa ngọc khỏi inventory về đúng client sở hữu player.
+    /// Chỉ client có LocalClientId == targetClientId mới thực thi.
+    /// </summary>
+    [ClientRpc]
+    private void RemoveCrystalFromOwnerClientRpc(ulong playerNetworkId, ulong targetClientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != targetClientId) return;
 
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetworkId, out NetworkObject playerObj))
         {
             PlayerInteraction interaction = playerObj.GetComponent<PlayerInteraction>();
-            if (interaction != null) interaction.RemoveCrystal(); 
+            if (interaction != null) interaction.RemoveCrystal();
         }
-
-        hasCrystal.Value = true;
     }
 
     private void Update()
