@@ -245888,6 +245888,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boss: {fileID: 1962224671}
   uiDocument: {fileID: 1024806070}
+  bossTitle: TEMPLE GUARDIAN
 --- !u!114 &1024806070
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -444928,7 +444929,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -7.07
+      value: -7.43
       objectReference: {fileID: 0}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.z
