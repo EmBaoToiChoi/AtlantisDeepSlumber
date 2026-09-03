@@ -46,7 +46,7 @@
     flex-shrink: 0;
 }
 
-/* Ảnh chân dung Boss bên trong khung (dùng silas_avatar.png) */
+/* Ảnh chân dung Boss bên trong khung (dùng rakan_avatar.png) */
 .boss-avatar {
     position: absolute;
     top: 4px;
@@ -55,7 +55,7 @@
     bottom: 4px;
     border-radius: 4px;
     -unity-background-scale-mode: scale-and-crop;
-    background-image: url("project://database/Assets/Hbao/Image/silas_avatar.png?fileID=-1129749111&guid=f5607d6d9cf46bd42b352e2b3e1e8c26&type=3#silas_avatar_0");
+    background-image: url("project://database/Assets/Hbao/Image/rakan_avatar.png?fileID=-1261190085&guid=6070762b29b060a41ba694eb49551c7b&type=3#rakan_avatar_0");
 }
 
 /* Khung Frame_Box_Small_01 bọc ngoài Avatar */
