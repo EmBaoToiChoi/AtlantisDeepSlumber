@@ -125,7 +125,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool rotateToCameraWhenUnarmed = true;
 
     [Header("Player Settings & Stats")]
-    public float moveSpeed = 4f;
+    public float moveSpeed = 8f;
     public float runSpeedMultiplier = 2.0f;
     public float damageAmount = 15f;
     public float attackRange = 3f;
@@ -1421,7 +1421,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         currentAnimState = "Idle";
         lastTriggeredAnimName = "Idle";
         isDeathAnimFinished = false;
-        moveSpeed = 4f;
+        moveSpeed = 8f;
         runSpeedMultiplier = 2.0f;
         damageAmount = 15f;
         cameraOffset = new Vector3(0f, 10f, -6f);
@@ -1882,7 +1882,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         maxHealth = 100f + hpLv * 10f;
         damageAmount = 15f + dmgLv * 5f;
         rSkillFireDamage = 40f + dmgLv * 5f;
-        moveSpeed = 4.0f + spdLv * 0.5f;
+        moveSpeed = 8.0f + spdLv * 0.5f;
 
         if (isStandaloneMode)
         {
@@ -4592,7 +4592,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         maxHealth = 100f + hp * 10f;
         damageAmount = 15f + dmg * 5f;
         rSkillFireDamage = 40f + dmg * 5f;
-        moveSpeed = 4.0f + spd * 0.5f;
+        moveSpeed = 8.0f + spd * 0.5f;
 
         currentHealth.Value = health;
         currentMana.Value = 100f + mp * 10f;

@@ -8,7 +8,7 @@ public class ElenaArcher : ElenaPlayer
 
         characterClassIndex = 2; // Elena Archer
         maxHealth = 90f;
-        moveSpeed = 6f;
+        moveSpeed = 8f;
         runSpeedMultiplier = 2.0f;
         damageAmount = 18f;
         attackRange = 8f;

@@ -5,7 +5,7 @@ public class MayaHealingZone : MonoBehaviour
 {
     public float radius = 5f;
     public float duration = 5f;
-    public float healAmount = 50f;
+    public float healAmount = 75f;
     public GameObject healBurstVfxPrefab;
     public GameObject playerHealVfxPrefab;
 

@@ -8,7 +8,7 @@ public class MayaSupport : MayaPlayer
 
         characterClassIndex = 1; // Maya Support
         maxHealth = 100f;
-        moveSpeed = 5f;
+        moveSpeed = 7f;
         runSpeedMultiplier = 2.0f;
         damageAmount = 12f;
         attackRange = 5f;
