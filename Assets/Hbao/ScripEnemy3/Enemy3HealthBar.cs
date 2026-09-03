@@ -104,7 +104,7 @@ public class Enemy3HealthBar : MonoBehaviour
         }
 
         float hpRatio = Mathf.Clamp01(displayedHealth / maxHp);
-        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(11.3f, 90f, hpRatio);
+        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(21.5f, 88f, hpRatio);
         if (progressBar != null) progressBar.style.width = Length.Percent(percent);
     }
 
@@ -159,7 +159,7 @@ public class Enemy3HealthBar : MonoBehaviour
         }
 
         float hpRatio = Mathf.Clamp01(displayedHealth / maxHp);
-        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(11.3f, 90f, hpRatio);
+        float percent = (hpRatio <= 0f) ? 0f : Mathf.Lerp(21.5f, 88f, hpRatio);
         if (progressBar != null)
         {
             progressBar.style.width = Length.Percent(percent);
