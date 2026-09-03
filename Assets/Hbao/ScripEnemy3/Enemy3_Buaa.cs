@@ -13,7 +13,7 @@ public class Enemy3_Buaa : NetworkBehaviour
 
     [Header("Health")]
     public float maxHealth = 500f;
-    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(150f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(500f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(EnemyState.Patrol, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Network Anim Sync")]
@@ -306,6 +306,10 @@ public class Enemy3_Buaa : NetworkBehaviour
         if (newVal <= 0f)
         {
             DisableHeadUI();
+            if (CurrentStateValue != EnemyState.Dead)
+            {
+                ApplyLocalDeathEffects();
+            }
         }
         float diff = oldVal - newVal;
         if (diff > 0)

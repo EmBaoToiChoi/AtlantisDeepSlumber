@@ -272,6 +272,10 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (newVal <= 0f)
         {
             DisableHeadUI();
+            if (CurrentStateValue != EnemyState.Dead)
+            {
+                ApplyLocalDeathEffects();
+            }
         }
         float diff = oldVal - newVal;
         if (diff > 0)

@@ -12,7 +12,7 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     [Header("Health")]
     public float maxHealth = 120f;
-    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(80f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(120f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(EnemyState.Patrol, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Network Anim Sync")]
@@ -280,6 +280,10 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (newVal <= 0f)
         {
             DisableHeadUI();
+            if (CurrentStateValue != EnemyState.Dead)
+            {
+                ApplyLocalDeathEffects();
+            }
         }
         float diff = oldVal - newVal;
         if (diff > 0)

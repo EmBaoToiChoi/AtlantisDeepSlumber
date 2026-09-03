@@ -15,7 +15,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     [Header("Health")]
     public float maxHealth = 300f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        300f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Network State Sync ────────────────────────────────────
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
@@ -388,6 +388,10 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (newVal <= 0f)
         {
             DisableHeadUI();
+            if (CurrentStateValue != EnemyState.Dead)
+            {
+                ApplyLocalDeathEffects();
+            }
         }
         float diff = oldVal - newVal;
         if (diff > 0)
