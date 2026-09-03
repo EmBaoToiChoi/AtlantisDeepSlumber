@@ -233252,7 +233252,7 @@ MonoBehaviour:
   autoAnimatePreview: 1
   previewPillarRadius: 1
   previewPillarLength: 6
-  previewTrajectoryLength: 49.4
+  previewTrajectoryLength: 40.17
   previewReverseRotation: 0
   isSpawningActive:
     UpdateTraits:
